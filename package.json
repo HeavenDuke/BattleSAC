@@ -1,0 +1,19 @@
+{
+  "name": "BattleSAC",
+  "version": "1.0.0",
+  "description": "Battlefield SAC simulation system - Course Project for Introduction to Network & Information Security Technology.",
+  "repository": "https://github.com/HeavenDuke/BattleSAC",
+  "homepage": "https://github.com/HeavenDuke/BattleSAC",
+  "author": "LHC, LLK, CSH, XFF, MD",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node app.js"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.15.3",
+    "pug": "^2.0.0-rc.1",
+    "socket.io": "^2.0.1"
+  }
+}
