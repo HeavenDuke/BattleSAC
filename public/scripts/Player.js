@@ -20,7 +20,7 @@ require([], function () {
                 this.p.vy = 0;
             }
 
-            this.p.socket.emit('update', { playerId: this.p.playerId, x: this.p.x, y: this.p.y, sheet: this.p.sheet });
+            this.p.socket.emit('update', { id: this.p.playerId, x: this.p.x, y: this.p.y, sheet: this.p.sheet });
         }
     });
 

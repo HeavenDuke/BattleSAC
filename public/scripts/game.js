@@ -26,26 +26,31 @@ require(objectFiles, function () {
         });
 
         socket.on('connected', function (data) {
-            selfId = data['playerId'];
-            player = new Q.Player({ playerId: selfId, x: 100, y: 100, socket: socket });
+            console.log(data);
+            var selfId = data['id'];
+            var player = new Q.Player({ playerId: selfId, x: 100, y: 100, socket: socket });
             stage.insert(player);
             stage.add('viewport').follow(player);
+
+            socket.on('updated', function (data) {
+                var actor = players.filter(function (obj) {
+                    return obj.playerId == data['id'];
+                })[0];
+                if (actor) {
+                    actor.player.p.x = data['x'];
+                    actor.player.p.y = data['y'];
+                    actor.player.p.sheet = data['sheet'];
+                    actor.player.p.update = true;
+                } else {
+                    var temp = new Q.Actor({ playerId: data['id'], x: data['x'], y: data['y'], sheet: data['sheet'] });
+                    players.push({ player: temp, playerId: data['id'] });
+                    stage.insert(temp);
+                }
+            });
         });
 
-        socket.on('updated', function (data) {
-            var actor = players.filter(function (obj) {
-                return obj.playerId == data['playerId'];
-            })[0];
-            if (actor) {
-                actor.player.p.x = data['x'];
-                actor.player.p.y = data['y'];
-                actor.player.p.sheet = data['sheet'];
-                actor.player.p.update = true;
-            } else {
-                var temp = new Q.Actor({ playerId: data['playerId'], x: data['x'], y: data['y'], sheet: data['sheet'] });
-                players.push({ player: temp, playerId: data['playerId'] });
-                stage.insert(temp);
-            }
+        socket.on('crowded', function (data) {
+            alert("We currently have enough players.");
         });
     }
 
