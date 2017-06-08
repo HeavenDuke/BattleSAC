@@ -34,10 +34,10 @@ using CryptoPP::SecByteBlock;
 
 namespace JsonAPI{
 
-	CryptoPP::Integer Str2BigInt(std::string str){
+	inline CryptoPP::Integer Str2BigInt(std::string str){
 		return CryptoPP::Integer(str.c_str());
 	}
-	std::string BigInt2Str(CryptoPP::Integer bigint){
+	inline std::string BigInt2Str(CryptoPP::Integer bigint){
 		std::stringstream ss;
 		std::string str;
 
@@ -101,7 +101,9 @@ namespace JsonAPI{
 		}
 	};
 	
-	inline std::pair<PublicKeyString, PrivateKeyString> RandomlyGenerateKey(){
+	typedef std::pair<PublicKeyString, PrivateKeyString> KeyPairString;
+
+	inline KeyPairString RandomlyGenerateKey(){
 		AutoSeededRandomPool rng;
 		rng.Reseed();
 		InvertibleRSAFunction parameters;
@@ -339,6 +341,15 @@ namespace Lagrange{
 		}
 	};
 
+	// lambda表达式的替代品，计算目标多项式函数的值
+	inline Math::BigInt f(Math::BigInt x, int nEnough, const std::vector<Math::BigInt>& c){
+		Math::BigInt sum(0l);
+		for (int i = 0; i < nEnough; ++i){
+			sum += c[i] * Math::bigint_pow(x, i);
+		}
+		return sum;
+	}
+
 	inline std::vector<SecretPart> SecretDivide(Math::BigInt secret, int nAll, int nEnough, int bitCount = 256){
 		using Math::BigInt;
 		std::vector<BigInt> c(nEnough);
@@ -349,13 +360,14 @@ namespace Lagrange{
 			c[i].Randomize(rng, bitCount);
 		}
 
-		auto f = [&](BigInt x)->BigInt{
-			BigInt sum(0l);
-			for (int i = 0; i < nEnough; ++i){
-				sum += c[i] * Math::bigint_pow(x, i);
-			}
-			return sum;
-		};
+		// lambda表达式被取消使用
+		//auto f = [&](BigInt x)->BigInt{
+		//	BigInt sum(0l);
+		//	for (int i = 0; i < nEnough; ++i){
+		//		sum += c[i] * Math::bigint_pow(x, i);
+		//	}
+		//	return sum;
+		//};
 
 		std::vector<SecretPart> keyArray(nAll);
 
@@ -366,7 +378,8 @@ namespace Lagrange{
 			x.Randomize(rng, BigInt(1), BigInt(99999));
 
 			keyArray[i].x = x;
-			keyArray[i].fx = f(x);
+			//keyArray[i].fx = f(x);
+			keyArray[i].fx = f(x,nEnough,c);
 		}
 
 		return keyArray;
@@ -394,17 +407,13 @@ namespace Lagrange{
 				A(i, j) = Math::bigint_pow(x[i], j);
 		log_msg("自变量矩阵", A);
 
-		auto det = A.det();
+		Math::BigInt det = A.det();
 		log_msg("|A|", det);
 
 		Math::BigIntMat A_star = A.adjoint();
-		//log_msg("伴随矩阵", A_star);
 		log_msg("AA*", A*A_star);
 
-
-		auto m0 = A_star.row(0);	// 伴随矩阵的第一行
-		//for (int i = 0; i < nEnough; ++i)
-		//	m[i] = A_star(0, i);
+		std::vector<Math::BigInt> m0 = A_star.row(0);	// 伴随矩阵的第一行
 		
 		BigInt MxF(0l);//m*f
 		for (int i = 0; i < nEnough; ++i)

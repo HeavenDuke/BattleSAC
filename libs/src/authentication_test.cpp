@@ -11,7 +11,8 @@ void test_lagrange(){
 	int nEnough = nAll/2; // 解密所需的最小人数
 	const char* secret = "31241932784987402136721342314";
 
-	auto keyArray = Lagrange::SecretDivide(Lagrange::Math::BigInt(secret), nAll, nEnough);
+	std::vector<Lagrange::SecretPart> keyArray = 
+		Lagrange::SecretDivide(Lagrange::Math::BigInt(secret), nAll, nEnough);
 
 	std::cout << "秘密分解的结果为：" << std::endl;
 	for (int i = 0; i < nAll; ++i){
@@ -29,20 +30,19 @@ void test_lagrange(){
 
 void test_signature(){
 
-		auto key_tupe = JsonAPI::RandomlyGenerateKey();
-		auto publicKey1 = key_tupe.first;
-		auto privateKey1 = key_tupe.second;
+		JsonAPI::KeyPairString key_tupe = JsonAPI::RandomlyGenerateKey();
+		JsonAPI::PublicKeyString publicKey1 = key_tupe.first;
+		JsonAPI::PrivateKeyString privateKey1 = key_tupe.second;
 		//std::cout << publicKey << std::endl;
 		//std::cout << privateKey << std::endl;
 
-		auto key_tupe2 = JsonAPI::RandomlyGenerateKey();
-		auto publicKey2 = key_tupe2.first;
-		auto privateKey2 = key_tupe2.second;
+		JsonAPI::KeyPairString key_tupe2 = JsonAPI::RandomlyGenerateKey();
+		JsonAPI::PublicKeyString publicKey2 = key_tupe2.first;
+		JsonAPI::PrivateKeyString privateKey2 = key_tupe2.second;
 		//std::cout << publicKey << std::endl;
 		//std::cout << privateKey << std::endl;
 	
-		// Message
-		std::string message_user1 = "xufeifan test";
+		std::string message_user1 = "xufeifan test message for user1";
 		std::string signature = Signature::FromMessage(message_user1, privateKey1);
 
 		bool is_user1 = Signature::Verify(message_user1, signature, publicKey1);
@@ -53,6 +53,7 @@ void test_signature(){
 
 int main(int argc, char* argv[]){
 
+	test_lagrange();
 	test_signature();
 
 	return 0;
