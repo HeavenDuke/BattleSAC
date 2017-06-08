@@ -32,96 +32,11 @@ using CryptoPP::SecByteBlock;
 
 #pragma comment(lib,"cryptlib.lib")
 
-namespace JsonAPI{
-
-	inline CryptoPP::Integer Str2BigInt(std::string str){
-		return CryptoPP::Integer(str.c_str());
-	}
-	inline std::string BigInt2Str(CryptoPP::Integer bigint){
-		std::stringstream ss;
-		std::string str;
-
-		ss << bigint;
-		ss >> str;
-		return str;
-	}
-
-	class PublicKeyString{
-	private:
-		std::string Modulus_n;
-		std::string PublicExponent_e;
-	public:
-		PublicKeyString(RSA::PublicKey key){
-			Modulus_n = BigInt2Str(key.GetModulus());
-			PublicExponent_e = BigInt2Str(key.GetPublicExponent());
-		}
-		RSA::PublicKey toRSA_PublicKey(){
-			RSA::PublicKey key;
-			key.Initialize(
-				Str2BigInt(Modulus_n),
-				Str2BigInt(PublicExponent_e)
-				);
-			return key;
-		}
-		inline friend std::ostream& operator<<(std::ostream& out, PublicKeyString&	_this){
-			out << "PublicKeyString: " << std::endl;
-			out << "\tn:" << _this.Modulus_n << std::endl;
-			out << "\te:" << _this.PublicExponent_e << std::endl;
-			return out;
-		}
-	};
-	
-	class PrivateKeyString{
-	private:
-
-		std::string Modulus_n;
-		std::string PublicExponent_e;
-		std::string PrivateExponent_d;
-	public:
-		PrivateKeyString(RSA::PrivateKey key){
-			Modulus_n = BigInt2Str(key.GetModulus());
-			PublicExponent_e = BigInt2Str(key.GetPublicExponent());
-			PrivateExponent_d = BigInt2Str(key.GetPrivateExponent());
-		}
-		RSA::PrivateKey toRSA_PrivateKey(){
-			RSA::PrivateKey key;
-			key.Initialize(
-				Str2BigInt(Modulus_n),
-				Str2BigInt(PublicExponent_e),
-				Str2BigInt(PrivateExponent_d)
-				);
-			return key;
-		}
-		inline friend std::ostream& operator<<(std::ostream& out, PrivateKeyString&	_this){
-			out << "PrivateKeyString: " << std::endl;
-			out << "\tn:" << _this.Modulus_n << std::endl;
-			out << "\te:" << _this.PublicExponent_e << std::endl;
-			out << "\td:" << _this.PrivateExponent_d << std::endl;
-			return out;
-		}
-	};
-	
-	typedef std::pair<PublicKeyString, PrivateKeyString> KeyPairString;
-
-	inline KeyPairString RandomlyGenerateKey(){
-		AutoSeededRandomPool rng;
-		rng.Reseed();
-		InvertibleRSAFunction parameters;
-		parameters.GenerateRandomWithKeySize(rng, 1024);
-		RSA::PrivateKey privateKey(parameters);
-		RSA::PublicKey publicKey(parameters);
-		return std::make_pair(
-			PublicKeyString(publicKey), 
-			PrivateKeyString(privateKey)
-			);
-	}
-}
-
 // 封装了一些签名验证的底层细节
 namespace Signature{
 
 	// 由明文消息，根据私钥生成签名
-	inline std::string FromMessage(std::string message, RSA::PrivateKey privateKey){
+	inline std::string SignMessage(std::string message, RSA::PrivateKey privateKey){
 		
 		RSASS<PSS, SHA1>::Signer signer(privateKey);
 		std::string signature;
@@ -134,9 +49,7 @@ namespace Signature{
 			); // StringSource
 		return signature;
 	}
-	inline std::string FromMessage(std::string message, JsonAPI::PrivateKeyString privateKey){
-		return FromMessage(message, privateKey.toRSA_PrivateKey());
-	}
+
 	// 由消息、前面，验证是否为该公钥人所持有
 	inline bool Verify(std::string message, std::string signature, RSA::PublicKey publicKey){
 		try{
@@ -159,9 +72,6 @@ namespace Signature{
 			return false;
 		}
 		return true;
-	}
-	inline bool Verify(std::string message, std::string signature, JsonAPI::PublicKeyString publicKey){
-		return Verify(message, signature, publicKey.toRSA_PublicKey());
 	}
 };
 
@@ -424,3 +334,134 @@ namespace Lagrange{
 
 }
 
+namespace JsonStrAPI{
+
+	inline CryptoPP::Integer Str2BigInt(std::string str){
+		return CryptoPP::Integer(str.c_str());
+	}
+	inline std::string BigInt2Str(CryptoPP::Integer bigint){
+		std::stringstream ss;
+		std::string str;
+
+		ss << bigint;
+		ss >> str;
+		return str;
+	}
+
+	class PublicKeyString{
+	public:
+		std::string Modulus_n;
+		std::string PublicExponent_e;
+	public:
+		PublicKeyString(RSA::PublicKey key){
+			Modulus_n = BigInt2Str(key.GetModulus());
+			PublicExponent_e = BigInt2Str(key.GetPublicExponent());
+		}
+		RSA::PublicKey toRSA_PublicKey(){
+			RSA::PublicKey key;
+			key.Initialize(
+				Str2BigInt(Modulus_n),
+				Str2BigInt(PublicExponent_e)
+				);
+			return key;
+		}
+		inline friend std::ostream& operator<<(std::ostream& out, PublicKeyString&	_this){
+			out << "PublicKeyString: " << std::endl;
+			out << "\tn:" << _this.Modulus_n << std::endl;
+			out << "\te:" << _this.PublicExponent_e << std::endl;
+			return out;
+		}
+	};
+
+	class PrivateKeyString{
+	public:
+		std::string Modulus_n;
+		std::string PublicExponent_e;
+		std::string PrivateExponent_d;
+	public:
+		PrivateKeyString(RSA::PrivateKey key){
+			Modulus_n = BigInt2Str(key.GetModulus());
+			PublicExponent_e = BigInt2Str(key.GetPublicExponent());
+			PrivateExponent_d = BigInt2Str(key.GetPrivateExponent());
+		}
+		RSA::PrivateKey toRSA_PrivateKey(){
+			RSA::PrivateKey key;
+			key.Initialize(
+				Str2BigInt(Modulus_n),
+				Str2BigInt(PublicExponent_e),
+				Str2BigInt(PrivateExponent_d)
+				);
+			return key;
+		}
+		inline friend std::ostream& operator<<(std::ostream& out, PrivateKeyString&	_this){
+			out << "PrivateKeyString: " << std::endl;
+			out << "\tn:" << _this.Modulus_n << std::endl;
+			out << "\te:" << _this.PublicExponent_e << std::endl;
+			out << "\td:" << _this.PrivateExponent_d << std::endl;
+			return out;
+		}
+	};
+
+	typedef std::pair<PublicKeyString, PrivateKeyString> KeyPairString;
+
+	inline KeyPairString RandomlyGenerateKey(){
+		AutoSeededRandomPool rng;
+		rng.Reseed();
+		InvertibleRSAFunction parameters;
+		parameters.GenerateRandomWithKeySize(rng, 1024);
+		RSA::PrivateKey privateKey(parameters);
+		RSA::PublicKey publicKey(parameters);
+		return std::make_pair(
+			PublicKeyString(publicKey),
+			PrivateKeyString(privateKey)
+			);
+	}
+	inline std::string SignMessage(std::string message, JsonStrAPI::PrivateKeyString privateKey){
+		return Signature::SignMessage(message, privateKey.toRSA_PrivateKey());
+	}
+	inline bool Verify(std::string message, std::string signature, JsonStrAPI::PublicKeyString publicKey){
+		return Signature::Verify(message, signature, publicKey.toRSA_PublicKey());
+	}
+
+	class SecretPartString{
+	public:
+		std::string	x;
+		std::string	fx;
+
+		SecretPartString(Lagrange::SecretPart s){
+			x = BigInt2Str(s.x);
+			fx = BigInt2Str(s.fx);
+		}
+		Lagrange::SecretPart toSecretPart(){
+			Lagrange::SecretPart _ret;
+			_ret.x = Str2BigInt(x);
+			_ret.fx = Str2BigInt(fx);
+			return _ret;
+		}
+
+		inline friend std::ostream& operator<<(std::ostream& out, SecretPartString&	_this){
+			out << "SecretPart " << std::endl;
+			out << "\tx:" << _this.x << std::endl;
+			out << "\tfx:" << _this.fx << std::endl;
+			return out;
+		}
+	};
+
+	inline std::vector<SecretPartString> SecretDivide(std::string secret, int nAll, int nEnough, int bitCount = 256){
+		std::vector<Lagrange::SecretPart> keyArray =
+			Lagrange::SecretDivide(Str2BigInt(secret), nAll, nEnough, bitCount);
+
+		std::vector<SecretPartString> keyArrayStr;
+		for (int i = 0; i < keyArray.size(); ++i)
+			keyArrayStr.push_back(SecretPartString(keyArray[i]));
+		return keyArrayStr;
+	}
+
+	inline std::string SecretReconstruct(std::vector<SecretPartString> keyArrayStr, int nEnough){
+		std::vector<Lagrange::SecretPart> keyArray;
+		for (int i = 0; i < keyArrayStr.size(); ++i)
+			keyArray.push_back(keyArrayStr[i].toSecretPart());
+		Lagrange::Math::BigInt reCons = Lagrange::SecretReconstruct(keyArray, nEnough);
+		return BigInt2Str(reCons);
+	}
+}
