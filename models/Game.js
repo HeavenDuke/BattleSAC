@@ -4,6 +4,7 @@
 
 var Player = require('./Player');
 var random = require('../libs/rand');
+var authentication = require('../libs').authentication;
 
 var Game = function () {
     this.max_player_count = 2;
@@ -14,8 +15,15 @@ var Game = function () {
     var titles = [[0, 1, 2], [0, 1, 2]];
     var position = 0;
     for(var i = 0; i < this.max_player_count; i++) {
-        this.players[i] = new Player(i, titles[position][i], position);
+        this.players[i] = new Player(i, titles[position][i], position, authentication.generateKey());
         position = 1 - position;
+    }
+    for(i = 0; i < this.max_player_count; i++) {
+        for(var j = 0; j < this.max_player_count; j++) {
+            if (this.players[i].position == this.players[j].position) {
+                this.players[i].public_keys[j] = this.players[j].key.public;
+            }
+        }
     }
 };
 

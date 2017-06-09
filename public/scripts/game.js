@@ -3,7 +3,7 @@
  */
 
 var players = [];
-var enemies = [];
+var selfId = null;
 var socket = io.connect(window.location.origin);
 var UiPlayers = document.getElementById("players");
 
@@ -11,9 +11,14 @@ var Q = Quintus({audioSupported: [ 'wav','mp3' ]})
     .include('Sprites, Scenes, Input, 2D, Anim, Touch, UI, Audio')
     .setup("game", { maximize: true })
     .enableSound()
-    .controls()
+    .controls();
 Q.touch(Q.SPRITE_ALL);
 
+$("#unknown_menu").children().click(function () {
+    socket.emit("authentication", JSON.parse($(this).parent().attr('params')));
+    $(this).parent().css("display", "none");
+    $("canvas").focus();
+});
 
 Q.gravityY = 0;
 
@@ -39,10 +44,22 @@ require(objectFiles, function () {
         });
 
         socket.on('connected', function (data) {
-            var selfId = data['id'];
-            var player = new Q.Player({ playerId: selfId, x: 100, y: 100, socket: socket });
+            selfId = data['id'];
+            var player = new Q.Player({ playerId: selfId, x: data.initial_location[0], y: data.initial_location[1], socket: socket });
             stage.insert(player);
             stage.add('viewport').follow(player);
+
+            socket.on('authentication', function (data) {
+                var actor = players.filter(function (obj) {
+                    return obj.playerId == data['playerId'];
+                })[0];
+                if (actor) {
+                    if (data.valid == false) {
+                        actor.player.p.isEnemy = true;
+                        actor.player.p.sheet = "enemy";
+                    }
+                }
+            });
 
             socket.on('updated', function (data) {
                 var actor = players.filter(function (obj) {
@@ -51,10 +68,10 @@ require(objectFiles, function () {
                 if (actor) {
                     actor.player.p.x = data['x'];
                     actor.player.p.y = data['y'];
-                    actor.player.p.sheet = data['sheet'];
+                    actor.player.p.sheet = (actor.player.p.isEnemy == true ? "enemy" : "player");
                     actor.player.p.update = true;
                 } else {
-                    var temp = new Q.Actor({ playerId: data['id'], x: data['x'], y: data['y'], sheet: data['sheet'] });
+                    var temp = new Q.Actor({ playerId: data['id'], x: data['x'], y: data['y'], sheet: "player" });
                     players.push({ player: temp, playerId: data['id'] });
                     stage.insert(temp);
                 }

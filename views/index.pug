@@ -4,15 +4,13 @@ block specified_ref
     link(rel="stylesheet" href="/stylesheets/theme.css")
     script(type="text/javascript" src="socket.io/socket.io.js")
 block content
-    div#self(style="display:none;")
-        button 查看持有钥匙
-    div#unknown(style="display:none;")
-        button 身份认证
-    div#select(style="display:none;")
+    div#self_menu(style="display:none;")
         button 选举指挥官
-    div#commander(style="display:none;")
+    div#unknown_menu(style="display:none;")
+        button 身份认证
+    div#commander_menu(style="display:none;")
         button 上交钥匙
-    div#case(style="display:none;")
+    div#case_menu(style="display:none;")
         button 开启补给箱
     div
         span#players.players

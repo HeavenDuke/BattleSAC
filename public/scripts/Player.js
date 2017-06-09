@@ -4,6 +4,16 @@
 
 var UiLocation = document.getElementById("location");
 
+var switchMenu = function (action, params) {
+    $("div[id$='_menu']").css("display", "none");
+    $("#" + action + "_menu").css("display", "block");
+    if (params) {
+        $("#" + action + "_menu").attr("params", JSON.stringify(params));
+    }
+};
+
+
+
 require([], function () {
     Q.Sprite.extend('Player', {
         init: function (p) {
@@ -23,11 +33,15 @@ require([], function () {
                 this.p.vy = 0;
             }
 
+            if (Q.inputs['up'] || Q.inputs['down'] || Q.inputs['left'] || Q.inputs['right']) {
+                switchMenu("none");
+            }
+
             this.p.socket.emit('update', { id: this.p.playerId, x: this.p.x, y: this.p.y, sheet: this.p.sheet });
             UiLocation.innerHTML = "Location: (" + this.p.x + ", " + this.p.y + ")";
         },
         touch: function (touch) {
-            console.log("self: " + touch)
+            switchMenu("self");
         }
     });
 
@@ -36,7 +50,6 @@ require([], function () {
             this._super(p, {
                 update: true
             });
-
             var temp = this;
             setInterval(function () {
                 if (!temp.p.update) {
@@ -47,7 +60,7 @@ require([], function () {
             this.on("touch");
         },
         touch: function (touch) {
-            console.log("player: " + touch);
+            switchMenu("unknown", {self: selfId, playerId: this.p.playerId});
         }
     });
 

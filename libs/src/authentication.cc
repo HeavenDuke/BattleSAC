@@ -32,128 +32,13 @@ using CryptoPP::SecByteBlock;
 
 using namespace Nan;
 
-namespace JsonAPI{
+#pragma comment(lib,"cryptlib.lib")
 
-	inline CryptoPP::Integer Str2BigInt(std::string str){
-		return CryptoPP::Integer(str.c_str());
-	}
-	inline std::string BigInt2Str(CryptoPP::Integer bigint){
-		std::stringstream ss;
-		std::string str;
-
-		ss << bigint;
-		ss >> str;
-		return str;
-	}
-
-	class PublicKeyString{
-	private:
-		std::string Modulus_n;
-		std::string PublicExponent_e;
-	public:
-		PublicKeyString(RSA::PublicKey key){
-			Modulus_n = BigInt2Str(key.GetModulus());
-			PublicExponent_e = BigInt2Str(key.GetPublicExponent());
-		}
-		RSA::PublicKey toRSA_PublicKey(){
-			RSA::PublicKey key;
-			key.Initialize(
-				Str2BigInt(Modulus_n),
-				Str2BigInt(PublicExponent_e)
-				);
-			return key;
-		}
-		std::string getModulus() {
-		    return Modulus_n;
-		}
-		std::string getPublicExponent() {
-            return  PublicExponent_e;
-        }
-		inline friend std::ostream& operator<<(std::ostream& out, PublicKeyString&	_this){
-			out << "PublicKeyString: " << std::endl;
-			out << "\tn:" << _this.Modulus_n << std::endl;
-			out << "\te:" << _this.PublicExponent_e << std::endl;
-			return out;
-		}
-	};
-
-	class PrivateKeyString{
-	private:
-
-		std::string Modulus_n;
-		std::string PublicExponent_e;
-		std::string PrivateExponent_d;
-	public:
-		PrivateKeyString(RSA::PrivateKey key){
-			Modulus_n = BigInt2Str(key.GetModulus());
-			PublicExponent_e = BigInt2Str(key.GetPublicExponent());
-			PrivateExponent_d = BigInt2Str(key.GetPrivateExponent());
-		}
-		RSA::PrivateKey toRSA_PrivateKey(){
-			RSA::PrivateKey key;
-			key.Initialize(
-				Str2BigInt(Modulus_n),
-				Str2BigInt(PublicExponent_e),
-				Str2BigInt(PrivateExponent_d)
-				);
-			return key;
-		}
-		std::string getModulus() {
-            return Modulus_n;
-        }
-        std::string getPublicExponent() {
-            return  PublicExponent_e;
-        }
-        std::string getPrivateExponent() {
-            return  PrivateExponent_d;
-        }
-		inline friend std::ostream& operator<<(std::ostream& out, PrivateKeyString&	_this){
-			out << "PrivateKeyString: " << std::endl;
-			out << "\tn:" << _this.Modulus_n << std::endl;
-			out << "\te:" << _this.PublicExponent_e << std::endl;
-			out << "\td:" << _this.PrivateExponent_d << std::endl;
-			return out;
-		}
-	};
-
-	typedef std::pair<PublicKeyString, PrivateKeyString> KeyPairString;
-
-	inline KeyPairString RandomlyGenerateKey(){
-		AutoSeededRandomPool rng;
-		rng.Reseed();
-		InvertibleRSAFunction parameters;
-		parameters.GenerateRandomWithKeySize(rng, 1024);
-		RSA::PrivateKey privateKey(parameters);
-		RSA::PublicKey publicKey(parameters);
-		return std::make_pair(
-			PublicKeyString(publicKey),
-			PrivateKeyString(privateKey)
-			);
-	}
-
-	void Generate(const FunctionCallbackInfo<v8::Value> &args) {
-	    KeyPairString pairStr = RandomlyGenerateKey();
-	    PublicKeyString pubStr = pairStr.first;
-	    PrivateKeyString priStr = pairStr.second;
-        v8::Local<v8::Object> obj = Nan::New<v8::Object>();
-        v8::Local<v8::Object> pubObj = Nan::New<v8::Object>();
-        pubObj->Set(Nan::New("n").ToLocalChecked(), Nan::New(pubStr.getModulus()).ToLocalChecked());
-        pubObj->Set(Nan::New("e").ToLocalChecked(), Nan::New(pubStr.getPublicExponent()).ToLocalChecked());
-        v8::Local<v8::Object> priObj = Nan::New<v8::Object>();
-        priObj->Set(Nan::New("n").ToLocalChecked(), Nan::New(priStr.getModulus()).ToLocalChecked());
-        priObj->Set(Nan::New("e").ToLocalChecked(), Nan::New(priStr.getPublicExponent()).ToLocalChecked());
-        priObj->Set(Nan::New("d").ToLocalChecked(), Nan::New(priStr.getPrivateExponent()).ToLocalChecked());
-        obj->Set(Nan::New("public").ToLocalChecked(), pubObj);
-        obj->Set(Nan::New("private").ToLocalChecked(), priObj);
-        args.GetReturnValue().Set(obj);
-	}
-}
-
-// 封装了一些签名验证的底层细节
+// 签名验证的底层细节
 namespace Signature{
 
 	// 由明文消息，根据私钥生成签名
-	inline std::string FromMessage(std::string message, RSA::PrivateKey privateKey){
+	inline std::string SignMessage(std::string message, RSA::PrivateKey privateKey){
 
 		RSASS<PSS, SHA1>::Signer signer(privateKey);
 		std::string signature;
@@ -166,9 +51,7 @@ namespace Signature{
 			); // StringSource
 		return signature;
 	}
-	inline std::string FromMessage(std::string message, JsonAPI::PrivateKeyString privateKey){
-		return FromMessage(message, privateKey.toRSA_PrivateKey());
-	}
+
 	// 由消息、前面，验证是否为该公钥人所持有
 	inline bool Verify(std::string message, std::string signature, RSA::PublicKey publicKey){
 		try{
@@ -192,25 +75,167 @@ namespace Signature{
 		}
 		return true;
 	}
-
-	inline bool Verify(std::string message, std::string signature, JsonAPI::PublicKeyString publicKey){
-		return Verify(message, signature, publicKey.toRSA_PublicKey());
-	}
-
-	void SignMessage(const FunctionCallbackInfo<v8::Value> &args) {
-        v8::Local<v8::Object> params = args[0]->ToObject();
-
-	}
-
-	void VerifyMessage(const FunctionCallbackInfo<v8::Value> &args) {
-
-	}
 };
 
+
+// 对Signature的进一步封装
+// 一切交互均已字符串为接口
+namespace SignatureJsonStrAPI{
+
+	inline CryptoPP::Integer Str2BigInt(std::string str){
+		return CryptoPP::Integer(str.c_str());
+	}
+	inline std::string BigInt2Str(CryptoPP::Integer bigint){
+		std::stringstream ss;
+		std::string str;
+
+		ss << bigint;
+		ss >> str;
+		return str;
+	}
+
+	class PublicKeyString{
+	public:
+		std::string Modulus_n;
+		std::string PublicExponent_e;
+	public:
+	    PublicKeyString() {}
+		PublicKeyString(RSA::PublicKey key){
+			Modulus_n = BigInt2Str(key.GetModulus());
+			PublicExponent_e = BigInt2Str(key.GetPublicExponent());
+		}
+		RSA::PublicKey toRSA_PublicKey(){
+			RSA::PublicKey key;
+			key.Initialize(
+				Str2BigInt(Modulus_n),
+				Str2BigInt(PublicExponent_e)
+				);
+			return key;
+		}
+		inline friend std::ostream& operator<<(std::ostream& out, PublicKeyString&	_this){
+			out << "PublicKeyString: " << std::endl;
+			out << "\tn:" << _this.Modulus_n << std::endl;
+			out << "\te:" << _this.PublicExponent_e << std::endl;
+			return out;
+		}
+	};
+
+	class PrivateKeyString{
+	public:
+		std::string Modulus_n;
+		std::string PublicExponent_e;
+		std::string PrivateExponent_d;
+	public:
+	    PrivateKeyString() {}
+		PrivateKeyString(RSA::PrivateKey key){
+			Modulus_n = BigInt2Str(key.GetModulus());
+			PublicExponent_e = BigInt2Str(key.GetPublicExponent());
+			PrivateExponent_d = BigInt2Str(key.GetPrivateExponent());
+		}
+		RSA::PrivateKey toRSA_PrivateKey(){
+			RSA::PrivateKey key;
+			key.Initialize(
+				Str2BigInt(Modulus_n),
+				Str2BigInt(PublicExponent_e),
+				Str2BigInt(PrivateExponent_d)
+				);
+			return key;
+		}
+		inline friend std::ostream& operator<<(std::ostream& out, PrivateKeyString&	_this){
+			out << "PrivateKeyString: " << std::endl;
+			out << "\tn:" << _this.Modulus_n << std::endl;
+			out << "\te:" << _this.PublicExponent_e << std::endl;
+			out << "\td:" << _this.PrivateExponent_d << std::endl;
+			return out;
+		}
+	};
+
+	typedef std::pair<PublicKeyString, PrivateKeyString> KeyPairString;
+
+	inline KeyPairString RandomlyGenerateKey(){
+		AutoSeededRandomPool rng;
+		rng.Reseed();
+		InvertibleRSAFunction parameters;
+		parameters.GenerateRandomWithKeySize(rng, 1024);
+		RSA::PrivateKey privateKey(parameters);
+		RSA::PublicKey publicKey(parameters);
+		return std::make_pair(
+			PublicKeyString(publicKey),
+			PrivateKeyString(privateKey)
+			);
+	}
+	inline std::string SignMessage(std::string message, PrivateKeyString privateKey){
+		return Signature::SignMessage(message, privateKey.toRSA_PrivateKey());
+	}
+	inline bool Verify(std::string message, std::string signature, PublicKeyString publicKey){
+		return Signature::Verify(message, signature, publicKey.toRSA_PublicKey());
+	}
+
+	void Generate(const FunctionCallbackInfo<v8::Value> &args) {
+        KeyPairString pairStr = RandomlyGenerateKey();
+        PublicKeyString pubStr = pairStr.first;
+        PrivateKeyString priStr = pairStr.second;
+        v8::Local<v8::Object> obj = Nan::New<v8::Object>();
+        v8::Local<v8::Object> pubObj = Nan::New<v8::Object>();
+        pubObj->Set(Nan::New("n").ToLocalChecked(), Nan::New(pubStr.Modulus_n).ToLocalChecked());
+        pubObj->Set(Nan::New("e").ToLocalChecked(), Nan::New(pubStr.PublicExponent_e).ToLocalChecked());
+        v8::Local<v8::Object> priObj = Nan::New<v8::Object>();
+        priObj->Set(Nan::New("n").ToLocalChecked(), Nan::New(priStr.Modulus_n).ToLocalChecked());
+        priObj->Set(Nan::New("e").ToLocalChecked(), Nan::New(priStr.PublicExponent_e).ToLocalChecked());
+        priObj->Set(Nan::New("d").ToLocalChecked(), Nan::New(priStr.PrivateExponent_d).ToLocalChecked());
+        obj->Set(Nan::New("public").ToLocalChecked(), pubObj);
+        obj->Set(Nan::New("private").ToLocalChecked(), priObj);
+        args.GetReturnValue().Set(obj);
+    }
+
+	void _SignMessage(const FunctionCallbackInfo<v8::Value> &args) {
+        v8::Local<v8::Object> params = args[0]->ToObject();
+        v8::Local<v8::Object> priObj = params->Get(Nan::New("key").ToLocalChecked())->ToObject();
+        PrivateKeyString priStr = PrivateKeyString();
+        v8::Local<v8::String> text = priObj->Get(Nan::New("n").ToLocalChecked())->ToString();
+        std::string t = std::string(*(v8::String::Utf8Value(text)));
+        priStr.Modulus_n = t;
+        text = priObj->Get(Nan::New("e").ToLocalChecked())->ToString();
+        t = std::string(*(v8::String::Utf8Value(text)));
+        priStr.PublicExponent_e = t;
+        text = priObj->Get(Nan::New("d").ToLocalChecked())->ToString();
+        t = std::string(*(v8::String::Utf8Value(text)));
+        priStr.PrivateExponent_d = t;
+        text = params->Get(Nan::New("message").ToLocalChecked())->ToString();
+        t = std::string(*(v8::String::Utf8Value(text)));
+
+        std::string secret = SignMessage(t, priStr);
+        std::cerr << secret << std::endl;
+        char* _secret = new char[secret.length() + 1];
+        secret.copy(_secret, secret.length(), 0);
+        Nan::MaybeLocal<v8::Object> message = Nan::NewBuffer(_secret, secret.length());
+        args.GetReturnValue().Set(message.ToLocalChecked());
+    }
+
+    void VerifyMessage(const FunctionCallbackInfo<v8::Value> &args) {
+        v8::Local<v8::Object> params = args[0]->ToObject();
+        v8::Local<v8::Object> pubObj = params->Get(Nan::New("key").ToLocalChecked())->ToObject();
+        PublicKeyString pubStr = PublicKeyString();
+        v8::Local<v8::String> text = pubObj->Get(Nan::New("n").ToLocalChecked())->ToString();
+        std::string t = std::string(*(v8::String::Utf8Value(text)));
+        pubStr.Modulus_n = t;
+        text = pubObj->Get(Nan::New("e").ToLocalChecked())->ToString();
+        t = std::string(*(v8::String::Utf8Value(text)));
+        pubStr.PublicExponent_e = t;
+        text = params->Get(Nan::New("message").ToLocalChecked())->ToString();
+        std::string message = std::string(*(v8::String::Utf8Value(text)));
+        text = params->Get(Nan::New("signature").ToLocalChecked())->ToString();
+        std::string signature = std::string(*(v8::String::Utf8Value(text)));
+        std::cerr << signature << std::endl;
+        v8::Local<v8::Boolean> valid = Nan::New(Verify(message, signature, pubStr));
+        args.GetReturnValue().Set(valid);
+    }
+}
+
 void init(v8::Local<v8::Object> exports) {
-    exports->Set(Nan::New("generateKey").ToLocalChecked(), Nan::New<v8::FunctionTemplate>(JsonAPI::Generate)->GetFunction());
-    exports->Set(Nan::New("signMessage").ToLocalChecked(), Nan::New<v8::FunctionTemplate>(Signature::SignMessage)->GetFunction());
-    exports->Set(Nan::New("verifyMessage").ToLocalChecked(), Nan::New<v8::FunctionTemplate>(Signature::VerifyMessage)->GetFunction());
+    exports->Set(Nan::New("generateKey").ToLocalChecked(), Nan::New<v8::FunctionTemplate>(SignatureJsonStrAPI::Generate)->GetFunction());
+    exports->Set(Nan::New("signMessage").ToLocalChecked(), Nan::New<v8::FunctionTemplate>(SignatureJsonStrAPI::_SignMessage)->GetFunction());
+    exports->Set(Nan::New("verifyMessage").ToLocalChecked(), Nan::New<v8::FunctionTemplate>(SignatureJsonStrAPI::VerifyMessage)->GetFunction());
 }
 
 NODE_MODULE(authentication, init)
