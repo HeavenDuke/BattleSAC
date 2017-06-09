@@ -32,50 +32,8 @@ using CryptoPP::SecByteBlock;
 
 #pragma comment(lib,"cryptlib.lib")
 
-// 封装了一些签名验证的底层细节
-namespace Signature{
 
-	// 由明文消息，根据私钥生成签名
-	inline std::string SignMessage(std::string message, RSA::PrivateKey privateKey){
-		
-		RSASS<PSS, SHA1>::Signer signer(privateKey);
-		std::string signature;
-		AutoSeededRandomPool rng;//????不确定这样是否可以,为什么前面需要随机种子？
-		rng.Reseed();
-		StringSource(message, true,
-			new SignerFilter(rng, signer,
-			new StringSink(signature)
-			) // SignerFilter
-			); // StringSource
-		return signature;
-	}
-
-	// 由消息、前面，验证是否为该公钥人所持有
-	inline bool Verify(std::string message, std::string signature, RSA::PublicKey publicKey){
-		try{
-			// Verify and Recover
-			RSASS<PSS, SHA1>::Verifier verifier(publicKey);
-
-			StringSource(message + signature, true,
-				new SignatureVerificationFilter(
-				verifier, NULL,
-				SignatureVerificationFilter::THROW_EXCEPTION
-				) // SignatureVerificationFilter
-				); // StringSource
-
-			std::cout << "身份验证通过" << std::endl;
-
-		} // try
-
-		catch (CryptoPP::Exception& e) {
-			std::cerr << "身份验证失败" << std::endl;
-			return false;
-		}
-		return true;
-	}
-};
-
-
+// 封装了秘密分解的底层细节
 namespace Lagrange{
 
 	template<typename T>inline void log_msg(std::string msg, T obj){
@@ -96,13 +54,13 @@ namespace Lagrange{
 			IntMatrix(int n){
 				this->re_initialize(n);
 			}
-			
+
 			IntMatrix(const IntMatrix& _other){
 				this->re_initialize(_other.mN);
 				for (int i = 0; i < mN*mN; ++i)
 					this->mData[i] = _other.mData[i];
 			}
-			
+
 			IntMatrix& operator =(const IntMatrix& _other){
 
 				this->re_initialize(_other.mN);
@@ -115,7 +73,7 @@ namespace Lagrange{
 			~IntMatrix(){
 				this->safe_release();
 			}
-			
+
 			inline friend std::ostream& operator<<(std::ostream& out, ThisType&	A){
 				for (int i = 0; i < A.mN; ++i){
 					for (int j = 0; j < A.mN; ++j)
@@ -124,13 +82,13 @@ namespace Lagrange{
 				}
 				return out;
 			}
-			
+
 			inline void safe_release(){
 				if (mData)
 					delete[] mData;
 				mData = NULL;
 			}
-			
+
 			inline void re_initialize(int n){
 				mN = n;
 				this->safe_release();
@@ -138,19 +96,19 @@ namespace Lagrange{
 				for (int i = 0; i < n*n; ++i)
 					this->mData[i] = T(0l);
 			}
-			
+
 			inline T& operator()(int i, int j){
 				return mData[i*mN + j];
 			}
-			
+
 			inline ThisType operator*(ThisType& _other){
 				ThisType ret(mN);
 				ThisType& _this = (*this);
-	
-				for (int i = 0; i < mN; ++i)			
-					for (int j = 0; j < mN; ++j)			
-						for (int k = 0; k < mN; ++k)		
-							ret(i, j) += _this(i, k) * _other(k, j);		
+
+				for (int i = 0; i < mN; ++i)
+				for (int j = 0; j < mN; ++j)
+				for (int k = 0; k < mN; ++k)
+					ret(i, j) += _this(i, k) * _other(k, j);
 				return ret;
 			}
 
@@ -185,7 +143,7 @@ namespace Lagrange{
 				for (int j = 0; j < mN; ++j)
 					mi[j] = (*this)(row, j);
 				return mi;
-			}		
+			}
 
 			inline T det(){
 				if (mN == 1)return mData[0];
@@ -289,12 +247,12 @@ namespace Lagrange{
 
 			keyArray[i].x = x;
 			//keyArray[i].fx = f(x);
-			keyArray[i].fx = f(x,nEnough,c);
+			keyArray[i].fx = f(x, nEnough, c);
 		}
 
 		return keyArray;
 	}
-	
+
 	inline Math::BigInt SecretReconstruct(std::vector<SecretPart> secret_part, int nEnough){
 		using Math::BigInt;
 		if (secret_part.size() < nEnough){
@@ -313,8 +271,8 @@ namespace Lagrange{
 
 		Math::BigIntMat A(nEnough);
 		for (int i = 0; i < nEnough; ++i)
-			for (int j = 0; j < nEnough; ++j)
-				A(i, j) = Math::bigint_pow(x[i], j);
+		for (int j = 0; j < nEnough; ++j)
+			A(i, j) = Math::bigint_pow(x[i], j);
 		log_msg("自变量矩阵", A);
 
 		Math::BigInt det = A.det();
@@ -324,17 +282,19 @@ namespace Lagrange{
 		log_msg("AA*", A*A_star);
 
 		std::vector<Math::BigInt> m0 = A_star.row(0);	// 伴随矩阵的第一行
-		
+
 		BigInt MxF(0l);//m*f
 		for (int i = 0; i < nEnough; ++i)
 			MxF += (m0[i] * f[i]);
-		
+
 		return MxF / BigInt(det);	// 保证了整数除法
 	}
 
 }
 
-namespace JsonStrAPI{
+// 对Lagrange的进一步封装
+// 一切交互均已字符串为接口
+namespace LagrangeJsonStrAPI{
 
 	inline CryptoPP::Integer Str2BigInt(std::string str){
 		return CryptoPP::Integer(str.c_str());
@@ -346,81 +306,6 @@ namespace JsonStrAPI{
 		ss << bigint;
 		ss >> str;
 		return str;
-	}
-
-	class PublicKeyString{
-	public:
-		std::string Modulus_n;
-		std::string PublicExponent_e;
-	public:
-		PublicKeyString(RSA::PublicKey key){
-			Modulus_n = BigInt2Str(key.GetModulus());
-			PublicExponent_e = BigInt2Str(key.GetPublicExponent());
-		}
-		RSA::PublicKey toRSA_PublicKey(){
-			RSA::PublicKey key;
-			key.Initialize(
-				Str2BigInt(Modulus_n),
-				Str2BigInt(PublicExponent_e)
-				);
-			return key;
-		}
-		inline friend std::ostream& operator<<(std::ostream& out, PublicKeyString&	_this){
-			out << "PublicKeyString: " << std::endl;
-			out << "\tn:" << _this.Modulus_n << std::endl;
-			out << "\te:" << _this.PublicExponent_e << std::endl;
-			return out;
-		}
-	};
-
-	class PrivateKeyString{
-	public:
-		std::string Modulus_n;
-		std::string PublicExponent_e;
-		std::string PrivateExponent_d;
-	public:
-		PrivateKeyString(RSA::PrivateKey key){
-			Modulus_n = BigInt2Str(key.GetModulus());
-			PublicExponent_e = BigInt2Str(key.GetPublicExponent());
-			PrivateExponent_d = BigInt2Str(key.GetPrivateExponent());
-		}
-		RSA::PrivateKey toRSA_PrivateKey(){
-			RSA::PrivateKey key;
-			key.Initialize(
-				Str2BigInt(Modulus_n),
-				Str2BigInt(PublicExponent_e),
-				Str2BigInt(PrivateExponent_d)
-				);
-			return key;
-		}
-		inline friend std::ostream& operator<<(std::ostream& out, PrivateKeyString&	_this){
-			out << "PrivateKeyString: " << std::endl;
-			out << "\tn:" << _this.Modulus_n << std::endl;
-			out << "\te:" << _this.PublicExponent_e << std::endl;
-			out << "\td:" << _this.PrivateExponent_d << std::endl;
-			return out;
-		}
-	};
-
-	typedef std::pair<PublicKeyString, PrivateKeyString> KeyPairString;
-
-	inline KeyPairString RandomlyGenerateKey(){
-		AutoSeededRandomPool rng;
-		rng.Reseed();
-		InvertibleRSAFunction parameters;
-		parameters.GenerateRandomWithKeySize(rng, 1024);
-		RSA::PrivateKey privateKey(parameters);
-		RSA::PublicKey publicKey(parameters);
-		return std::make_pair(
-			PublicKeyString(publicKey),
-			PrivateKeyString(privateKey)
-			);
-	}
-	inline std::string SignMessage(std::string message, JsonStrAPI::PrivateKeyString privateKey){
-		return Signature::SignMessage(message, privateKey.toRSA_PrivateKey());
-	}
-	inline bool Verify(std::string message, std::string signature, JsonStrAPI::PublicKeyString publicKey){
-		return Signature::Verify(message, signature, publicKey.toRSA_PublicKey());
 	}
 
 	class SecretPartString{
