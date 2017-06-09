@@ -184,6 +184,62 @@ namespace SignatureJsonStrAPI{
         return Signature::Verify(message, _signed_message, publicKey.toRSA_PublicKey());
     }
 
+    std::string Voter::Decrypt(PrivateKeyString privKey,const std::vector<byte>& ss) {
+        std::string recovered = "";
+        CryptoPP::RSAES_OAEP_SHA_Decryptor d(privKey.toRSA_PrivateKey());
+        std::string s = "";
+        for(int i = 0 ; i < ss.size() ; i++ ) {
+            s = s+char(ss[i]);
+        }
+
+        int nCiphertextLength = d.FixedCiphertextLength() * 2;
+
+        for (int i = s.size(), j = 0; i > 0; i -= nCiphertextLength, j += nCiphertextLength) {
+            std::string partCipher = s.substr(j, nCiphertextLength);
+            std::string partPlain;
+            CryptoPP::StringSource(partCipher, true, new CryptoPP::HexDecoder(
+                new CryptoPP::PK_DecryptorFilter(m_rng, d, new CryptoPP::StringSink(partPlain))));
+            recovered += partPlain;
+        }
+
+        //CryptoPP::StringSource ss2(s, true,
+        //  new CryptoPP::PK_DecryptorFilter(m_rng, d,
+        //      new CryptoPP::StringSink(recovered)
+        //      ) // PK_DecryptorFilter
+        //  ); // StringSource
+        return recovered;
+}
+
+std::vector<byte> Voter::Encrypt(PublicKeyString pubKey ,const std::string& s) {
+    std::string cipher = "";
+
+    CryptoPP::RSAES_OAEP_SHA_Encryptor e(pubKey.toRSA_PublicKey());
+
+    int nMaxMsgLength = e.FixedMaxPlaintextLength();
+
+    for (int i = s.size(), j = 0; i > 0; i -= nMaxMsgLength, j += nMaxMsgLength) {
+        std::string partPlain = s.substr(j, nMaxMsgLength);
+        std::string partCipher;
+        CryptoPP::StringSource(partPlain, true,
+            new CryptoPP::PK_EncryptorFilter(m_rng, e,
+                new CryptoPP::HexEncoder(new CryptoPP::StringSink(partCipher))));
+        cipher += partCipher;
+    }
+
+    //CryptoPP::StringSource ss1(s, true,
+    //  new CryptoPP::PK_EncryptorFilter(m_rng, e,
+    //      new CryptoPP::StringSink(cipher)
+    //      ) // PK_EncryptorFilter
+    //  ); // StringSource
+
+    std::vector<byte> res;
+    for(int i = 0 ; i < cipher.size() ; i++ ) {
+        res.push_back(byte(res[i]));
+    }
+
+    return res;
+}
+
 	void Generate(const FunctionCallbackInfo<v8::Value> &args) {
         KeyPairString pairStr = RandomlyGenerateKey();
         PublicKeyString pubStr = pairStr.first;
