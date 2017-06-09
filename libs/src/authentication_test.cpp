@@ -44,7 +44,7 @@ void test_signature(){
 		//std::cout << privateKey << std::endl;
 	
 		std::string message_user1 = "xufeifan test message for user1";
-		std::string signature = SignatureJsonStrAPI::SignMessage(message_user1, privateKey1);
+		std::vector<byte> signature = SignatureJsonStrAPI::SignMessage(message_user1, privateKey1);
 
 		bool is_user1 = SignatureJsonStrAPI::Verify(message_user1, signature, publicKey1);
 		std::cout << is_user1 << std::endl;// true

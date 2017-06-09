@@ -160,10 +160,22 @@ namespace SignatureJsonStrAPI{
 			PrivateKeyString(privateKey)
 			);
 	}
-	inline std::string SignMessage(std::string message, PrivateKeyString privateKey){
-		return Signature::SignMessage(message, privateKey.toRSA_PrivateKey());
+
+	inline std::vector<byte> SignMessage(std::string message, PrivateKeyString privateKey){
+		std::string s = Signature::SignMessage(message, privateKey.toRSA_PrivateKey());
+
+		std::vector<byte> _signed_message;
+		for (int i = 0; i < s.length(); ++i)
+			_signed_message.push_back((byte)(s[i]));
+		return _signed_message;
 	}
-	inline bool Verify(std::string message, std::string signature, PublicKeyString publicKey){
-		return Signature::Verify(message, signature, publicKey.toRSA_PublicKey());
+	inline bool Verify(std::string message, std::vector<byte> signature, PublicKeyString publicKey){
+		std::string _signed_message;
+		//_signed_message.append()
+		for (int i = 0; i < signature.size(); ++i)
+			_signed_message.push_back((char)(signature[i]));
+			// 不太确定 string::push_back 如何处理结尾的\0 但是测试没问题
+
+		return Signature::Verify(message, _signed_message, publicKey.toRSA_PublicKey());
 	}
 }
