@@ -3,14 +3,17 @@
  */
 
 var players = [];
-var socket = io.connect('http://localhost:8080');
+var enemies = [];
+var socket = io.connect(window.location.origin);
 var UiPlayers = document.getElementById("players");
 
 var Q = Quintus({audioSupported: [ 'wav','mp3' ]})
     .include('Sprites, Scenes, Input, 2D, Anim, Touch, UI, Audio')
     .setup("game", { maximize: true })
     .enableSound()
-    .controls().touch();
+    .controls()
+Q.touch(Q.SPRITE_ALL);
+
 
 Q.gravityY = 0;
 
@@ -25,8 +28,17 @@ require(objectFiles, function () {
             UiPlayers.innerHTML = 'Players: ' + data['playerCount'];
         });
 
+        socket.on('exit', function (data) {
+            UiPlayers.innerHTML = 'Players: ' + data['playerCount'];
+            var actor = players.filter(function (obj) {
+                return obj.playerId == data['id'];
+            })[0];
+            if (actor) {
+                actor.player.destroy();
+            }
+        });
+
         socket.on('connected', function (data) {
-            console.log(data);
             var selfId = data['id'];
             var player = new Q.Player({ playerId: selfId, x: 100, y: 100, socket: socket });
             stage.insert(player);
@@ -51,6 +63,10 @@ require(objectFiles, function () {
 
         socket.on('crowded', function (data) {
             alert("We currently have enough players.");
+        });
+
+        socket.on('start', function (data) {
+            console.log("game start!");
         });
     }
 

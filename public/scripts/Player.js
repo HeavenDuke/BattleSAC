@@ -2,6 +2,8 @@
  * Created by heavenduke on 17-5-30.
  */
 
+var UiLocation = document.getElementById("location");
+
 require([], function () {
     Q.Sprite.extend('Player', {
         init: function (p) {
@@ -10,6 +12,7 @@ require([], function () {
             });
 
             this.add('2d, platformerControls, animation');
+            this.on("touch");
         },
         step: function (dt) {
             if (Q.inputs['up']) {
@@ -21,6 +24,10 @@ require([], function () {
             }
 
             this.p.socket.emit('update', { id: this.p.playerId, x: this.p.x, y: this.p.y, sheet: this.p.sheet });
+            UiLocation.innerHTML = "Location: (" + this.p.x + ", " + this.p.y + ")";
+        },
+        touch: function (touch) {
+            console.log("self: " + touch)
         }
     });
 
@@ -37,6 +44,10 @@ require([], function () {
                 }
                 temp.p.update = false;
             }, 3000);
+            this.on("touch");
+        },
+        touch: function (touch) {
+            console.log("player: " + touch);
         }
     });
 

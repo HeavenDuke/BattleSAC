@@ -3,3 +3,7 @@
  */
 
 exports.hello = require('./build/Release/addon');
+
+exports.authentication = require('./build/Release/authentication.node');
+
+console.log(exports.authentication.generateKey());

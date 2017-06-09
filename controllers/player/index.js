@@ -15,18 +15,24 @@ module.exports = function (io) {
                 socket.on('disconnect', function () {
                     global.gameData.player_count--;
                     global.gameData.players[player.id].controlled = false;
-                    io.emit('join', { playerCount: global.gameData.player_count });
+                    if (global.gameData.can_end()) {
+                        global.gameData.end();
+                    }
+                    socket.broadcast.emit('exit', { playerCount: global.gameData.player_count });
+                    socket.emit('exit', { playerCount: global.gameData.player_count });
                 });
 
                 socket.on('update', function (data) {
+                    global.gameData.players[data.id].location = [data.x, data.y];
                     socket.broadcast.emit('updated', data);
                 });
 
                 if (global.gameData.can_start()) {
-                    global.gameData.start();
-                    io.emit('start', {
-                        enemies: global.gameData.enemies
-                    });
+                    setTimeout(function () {
+                        global.gameData.start();
+                        socket.broadcast.emit('start', global.gameData.case);
+                        socket.emit('start', {});
+                    }, 2000);
                 }
 
             }, 1000);
