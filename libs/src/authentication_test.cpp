@@ -1,4 +1,5 @@
-#include "authentication.hpp"
+#include "Lagrange.hpp"
+#include "Signature.hpp"
 
 using namespace std;
 
@@ -17,8 +18,8 @@ void test_lagrange(){
 
 	std::string secret = "31241932784987402136721342314.";
 
-	std::vector<JsonStrAPI::SecretPartString> keyArray =
-		JsonStrAPI::SecretDivide(secret, nAll, nEnough);
+	std::vector<LagrangeJsonStrAPI::SecretPartString> keyArray =
+		LagrangeJsonStrAPI::SecretDivide(secret, nAll, nEnough);
 
 	std::cout << "秘密分解的结果为：" << std::endl;
 	for (int i = 0; i < nAll; ++i){
@@ -27,7 +28,7 @@ void test_lagrange(){
 	std::cout << std::endl;
 
 
-	std::string reCons = JsonStrAPI::SecretReconstruct(keyArray, nEnough);
+	std::string reCons = LagrangeJsonStrAPI::SecretReconstruct(keyArray, nEnough);
 	std::cout << "分解前：" << secret << std::endl;
 	std::cout << "重构后：" << reCons << std::endl;
 	bool equal = (secret == reCons);
@@ -36,24 +37,24 @@ void test_lagrange(){
 
 void test_signature(){
 
-		JsonStrAPI::KeyPairString key_tupe = JsonStrAPI::RandomlyGenerateKey();
-		JsonStrAPI::PublicKeyString publicKey1 = key_tupe.first;
-		JsonStrAPI::PrivateKeyString privateKey1 = key_tupe.second;
+		SignatureJsonStrAPI::KeyPairString key_tupe = SignatureJsonStrAPI::RandomlyGenerateKey();
+		SignatureJsonStrAPI::PublicKeyString publicKey1 = key_tupe.first;
+		SignatureJsonStrAPI::PrivateKeyString privateKey1 = key_tupe.second;
 		//std::cout << publicKey << std::endl;
 		//std::cout << privateKey << std::endl;
 
-		JsonStrAPI::KeyPairString key_tupe2 = JsonStrAPI::RandomlyGenerateKey();
-		JsonStrAPI::PublicKeyString publicKey2 = key_tupe2.first;
-		JsonStrAPI::PrivateKeyString privateKey2 = key_tupe2.second;
+		SignatureJsonStrAPI::KeyPairString key_tupe2 = SignatureJsonStrAPI::RandomlyGenerateKey();
+		SignatureJsonStrAPI::PublicKeyString publicKey2 = key_tupe2.first;
+		SignatureJsonStrAPI::PrivateKeyString privateKey2 = key_tupe2.second;
 		//std::cout << publicKey << std::endl;
 		//std::cout << privateKey << std::endl;
 	
 		std::string message_user1 = "xufeifan test message for user1";
-		std::string signature = JsonStrAPI::SignMessage(message_user1, privateKey1);
+		std::string signature = SignatureJsonStrAPI::SignMessage(message_user1, privateKey1);
 
-		bool is_user1 = JsonStrAPI::Verify(message_user1, signature, publicKey1);
+		bool is_user1 = SignatureJsonStrAPI::Verify(message_user1, signature, publicKey1);
 		std::cout << is_user1 << std::endl;// true
-		is_user1 = JsonStrAPI::Verify(message_user1, signature, publicKey2);
+		is_user1 = SignatureJsonStrAPI::Verify(message_user1, signature, publicKey2);
 		std::cout << is_user1 << std::endl;// false
 }
 
