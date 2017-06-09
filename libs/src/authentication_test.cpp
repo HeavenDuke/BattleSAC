@@ -11,15 +11,9 @@ void test_lagrange(){
 	int nAll = 10;	// 总人数
 	int nEnough = nAll/2; // 解密所需的最小人数
 
-	/*【注意】大整数秘密要以“点号.”为结尾
-		因为Crypto的大整数转字符串时会加点
-		如果不加点，重构后的秘密可能和原文不一致
-		（结尾差一个点号）*/
-
-	std::string secret = "31241932784987402136721342314.";
-
-	std::vector<LagrangeJsonStrAPI::SecretPartString> keyArray =
-		LagrangeJsonStrAPI::SecretDivide(secret, nAll, nEnough);
+	LagrangeJsonStrAPI::Box_Keys box_keys = LagrangeJsonStrAPI::RandomlyGenerateBoxKeys(nAll, nEnough);
+	std::string secret = box_keys.first;
+	LagrangeJsonStrAPI::Keys keyArray = box_keys.second;
 
 	std::cout << "秘密分解的结果为：" << std::endl;
 	for (int i = 0; i < nAll; ++i){

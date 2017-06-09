@@ -332,14 +332,37 @@ namespace LagrangeJsonStrAPI{
 		}
 	};
 
-	inline std::vector<SecretPartString> SecretDivide(std::string secret, int nAll, int nEnough, int bitCount = 256){
+	typedef std::vector <SecretPartString > Keys;
+	typedef std::pair <std::string, Keys> Box_Keys;
+
+	inline Box_Keys RandomlyGenerateBoxKeys(int nAll, int nEnough, int secret_len = 64, int bitCount = 256){
+
+		CryptoPP::Integer x;
+		AutoSeededRandomPool rng;
+		rng.Reseed();
+		x.Randomize(rng, secret_len);// 32位的密码
+		x = x.AbsoluteValue();// 密码不能为负数
+
+		std::string secret = BigInt2Str(x);
+
+
 		std::vector<Lagrange::SecretPart> keyArray =
 			Lagrange::SecretDivide(Str2BigInt(secret), nAll, nEnough, bitCount);
 
 		std::vector<SecretPartString> keyArrayStr;
 		for (int i = 0; i < keyArray.size(); ++i)
 			keyArrayStr.push_back(SecretPartString(keyArray[i]));
-		return keyArrayStr;
+
+
+		std::pair <
+			std::string,
+			std::vector < SecretPartString >> ret;
+
+		ret.first = secret;
+		ret.second = keyArrayStr;
+		// 返回值的first 为 secret
+		// 返回值的second 为 keyArrayStr
+		return ret;
 	}
 
 	inline std::string SecretReconstruct(std::vector<SecretPartString> keyArrayStr, int nEnough){
