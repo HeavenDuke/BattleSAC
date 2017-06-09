@@ -3,12 +3,19 @@
  */
 
 var Player = require('./Player');
+var crypto = require('crypto');
 var Case = require('./Case');
 var random = require('../libs/rand');
 var authentication = require('../libs').authentication;
 
+var md5 = function (text) {
+    var enc = crypto.createHash('md5');
+    enc.update(test);
+    return enc.digest('hex');
+};
+
 var Game = function () {
-    this.max_player_count = 4;
+    this.max_player_count = 2;
     this.player_count = 0;
     this.players = {};
     this.case = {};
@@ -24,8 +31,9 @@ var Game = function () {
     this.case[rand2] = new Case(this.max_player_count / 2);
     this.compareMat = [];
     var caseIds = [rand1, rand2];
+    var randStr = Date.now();
     for(var i = 0; i < this.max_player_count; i++) {
-        this.players[i] = new Player(i, titles[position][i], position, authentication.generateKey(), this.case[caseIds[position]].distribute_key());
+        this.players[i] = new Player(i, titles[position][i], position, authentication.generateKey(), this.case[caseIds[position]].distribute_key(), md5(position + "" + randStr));
         position = 1 - position;
     }
     for(var i = 0; i < this.max_player_count; i++) {

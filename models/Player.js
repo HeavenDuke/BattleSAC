@@ -5,8 +5,9 @@
 var random = require('../libs').random;
 
 
-var Player = function (id, title, position, key, caseKey) {
+var Player = function (id, title, position, key, caseKey, code) {
     this.id = id;
+    this.code = code;
     this.initial_location = [random.rand_int(100, 1000), random.rand_int(100, 1000)];
     this.title = title;
     this.position = position;
