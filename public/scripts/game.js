@@ -3,6 +3,7 @@
  */
 
 var players = [];
+var cases = [];
 var selfId = null;
 var socket = io.connect(window.location.origin);
 var UiPlayers = document.getElementById("players");
@@ -16,6 +17,12 @@ Q.touch(Q.SPRITE_ALL);
 
 $("#unknown_menu").children().click(function () {
     socket.emit("authentication", JSON.parse($(this).parent().attr('params')));
+    $(this).parent().css("display", "none");
+    $("canvas").focus();
+});
+
+$("#case_menu").children().click(function () {
+    socket.emit("openCase", JSON.parse($(this).parent().attr('params')));
     $(this).parent().css("display", "none");
     $("canvas").focus();
 });
@@ -58,7 +65,18 @@ require(objectFiles, function () {
                         actor.player.p.isEnemy = true;
                         actor.player.p.sheet = "enemy";
                     }
+                    else {
+                        actor.player.p.isEnemy = false;
+                    }
                 }
+            });
+
+            socket.on('caseNotOpen', function (data) {
+                alert("failed to open supplement case.");
+            });
+
+            socket.on('caseOpened', function (data) {
+                console.log(data);
             });
 
             socket.on('updated', function (data) {
@@ -85,6 +103,7 @@ require(objectFiles, function () {
         socket.on('start', function (data) {
             for(var key in data) {
                 var temp = new Q.Case({ caseId: data[key]['id'], x: data[key].location[0], y: data[key].location[1]});
+                cases.push({case: temp, caseId: key});
                 stage.insert(temp);
             }
         });

@@ -8,18 +8,31 @@ var random = require('../libs/rand');
 var authentication = require('../libs').authentication;
 
 var Game = function () {
-    this.max_player_count = 2;
+    this.max_player_count = 4;
     this.player_count = 0;
     this.players = {};
     this.case = {};
     this.started = false;
     var titles = [[0, 1, 2], [0, 1, 2]];
     var position = 0;
-    this.case[random.rand_int(0, 100)] = new Case(213, 1);
-    this.case[random.rand_int(100, 200)] = new Case(214, 1);
+    var rand1 = random.rand_int(0, 100);
+    var rand2 = random.rand_int(0, 100);
+    while(rand2 == rand1) {
+        rand2 = random.rand_int(0, 100);
+    }
+    this.case[rand1] = new Case(this.max_player_count / 2);
+    this.case[rand2] = new Case(this.max_player_count / 2);
+    this.compareMat = [];
+    var caseIds = [rand1, rand2];
     for(var i = 0; i < this.max_player_count; i++) {
-        this.players[i] = new Player(i, titles[position][i], position, authentication.generateKey());
+        this.players[i] = new Player(i, titles[position][i], position, authentication.generateKey(), this.case[caseIds[position]].distribute_key());
         position = 1 - position;
+    }
+    for(var i = 0; i < this.max_player_count; i++) {
+        this.compareMat[i] = [];
+        for(var j = 0; j < this.max_player_count; j++) {
+            this.compareMat[i][j] = (-2 * (i != j));
+        }
     }
     for(i = 0; i < this.max_player_count; i++) {
         for(var j = 0; j < this.max_player_count; j++) {

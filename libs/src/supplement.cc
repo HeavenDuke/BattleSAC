@@ -378,6 +378,7 @@ namespace LagrangeJsonStrAPI{
 			keyArray.push_back(keyArrayStr[i].toSecretPart());
 		Lagrange::Math::BigInt reCons = Lagrange::SecretReconstruct(keyArray, nEnough);
 		Lagrange::Math::BigInt _secret = Str2BigInt(secret);
+//		std::cout << _secret << ' ' << reCons << std::endl;
 		return reCons == _secret;
 	}
 

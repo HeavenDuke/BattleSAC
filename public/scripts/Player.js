@@ -60,7 +60,12 @@ require([], function () {
             this.on("touch");
         },
         touch: function (touch) {
-            switchMenu("unknown", {self: selfId, playerId: this.p.playerId});
+            if (this.p.isEnemy == false) {
+                switchMenu("comrade", {self: selfId, playerId: this.p.playerId});
+            }
+            else if (this.p.isEnemy != true) {
+                switchMenu("unknown", {self: selfId, playerId: this.p.playerId});
+            }
         }
     });
 
@@ -72,7 +77,7 @@ require([], function () {
             this.on("touch");
         },
         touch: function (touch) {
-            switchMenu("case", {self: selfId, caseId: this.p.caseId});
+            switchMenu("case", {playerId: selfId, caseId: this.p.caseId});
         }
     });
 

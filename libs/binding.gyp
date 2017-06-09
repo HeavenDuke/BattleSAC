@@ -20,6 +20,16 @@
             	"<!(node -e \"require('nan')\")",
             	"/usr/include/cryptopp"
             ]
+        },{
+            "target_name": "voting",
+            "sources": ["src/voting.cc"],
+            "libraries": [
+            	"<!@(pkg-config --libs libcrypto++)"
+            ],
+            "include_dirs": [
+            	"<!(node -e \"require('nan')\")",
+            	"/usr/include/cryptopp"
+            ]
         }
     ]
 }

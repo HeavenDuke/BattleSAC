@@ -5,13 +5,14 @@
 var random = require('../libs').random;
 
 
-var Player = function (id, title, position, key) {
+var Player = function (id, title, position, key, caseKey) {
     this.id = id;
     this.initial_location = [random.rand_int(100, 1000), random.rand_int(100, 1000)];
     this.title = title;
     this.position = position;
     this.controlled = false;
     this.key = key;
+    this.caseKeys = [caseKey];
     this.authenticated = [];
     this.unauthenticated = [];
     this.public_keys = {};

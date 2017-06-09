@@ -14,8 +14,15 @@ var Case = function (player_count) {
     this.keys = _generated.keys;
 };
 
+Case.prototype.distribute_key = function () {
+    var index = random.rand_int(0, this.keys.length - 1);
+    var key = this.keys[index];
+    this.keys.splice(index, 1);
+    return key;
+};
+
 Case.prototype.open = function (keys) {
-    var result = supplement.openCase({keys: keys, nOpen: this.nOpen});
+    var result = supplement.openCase({secret: this.secret, keys: keys, nOpen: this.nOpen});
     if (result) {
         this.status = "open";
     }

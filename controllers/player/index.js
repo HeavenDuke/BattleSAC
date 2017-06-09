@@ -48,6 +48,21 @@ module.exports = function (io) {
                     socket.emit('authentication', {playerId: data.playerId, valid: valid});
                 });
 
+                socket.on('openCase', function (data) {
+                    console.log(data);
+                    console.log(global.gameData.case[data.caseId]);
+                    var result = global.gameData.case[data.caseId].open(global.gameData.players[data.playerId].caseKeys);
+                    console.log(result);
+                    if (result) {
+                            for(var id in global.gameData.players[data.playerId].authenticated) {
+                                global.gameData.players[id].socket.emit("caseOpened", {caseId: data.caseId});
+                            }
+                    }
+                    else {
+                        socket.emit("caseNotOpen", {caseId: data.caseId});
+                    }
+                });
+
                 if (global.gameData.can_start()) {
                     setTimeout(function () {
                         global.gameData.start();
