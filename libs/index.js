@@ -6,4 +6,6 @@ exports.hello = require('./build/Release/addon');
 
 exports.authentication = require('./build/Release/authentication.node');
 
+exports.supplement = require('./build/Release/supplement.node');
+
 exports.random = require('./rand');

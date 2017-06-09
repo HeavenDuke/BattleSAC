@@ -83,7 +83,10 @@ require(objectFiles, function () {
         });
 
         socket.on('start', function (data) {
-            console.log("game start!");
+            for(var key in data) {
+                var temp = new Q.Case({ caseId: data[key]['id'], x: data[key].location[0], y: data[key].location[1]});
+                stage.insert(temp);
+            }
         });
     }
 

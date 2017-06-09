@@ -7,7 +7,7 @@ var random = require('../libs').random;
 
 var Player = function (id, title, position, key) {
     this.id = id;
-    this.initial_location = [random.rand_int(0, 1000), random.rand_int(0, 1000)];
+    this.initial_location = [random.rand_int(100, 1000), random.rand_int(100, 1000)];
     this.title = title;
     this.position = position;
     this.controlled = false;

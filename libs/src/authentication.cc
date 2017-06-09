@@ -1,5 +1,6 @@
 #include <string>
 #include <iostream>
+#include <vector>
 #include <sstream>
 #include <nan.h>
 
@@ -83,94 +84,107 @@ namespace Signature{
 namespace SignatureJsonStrAPI{
 
 	inline CryptoPP::Integer Str2BigInt(std::string str){
-		return CryptoPP::Integer(str.c_str());
-	}
-	inline std::string BigInt2Str(CryptoPP::Integer bigint){
-		std::stringstream ss;
-		std::string str;
+        return CryptoPP::Integer(str.c_str());
+    }
+    inline std::string BigInt2Str(CryptoPP::Integer bigint){
+        std::stringstream ss;
+        std::string str;
 
-		ss << bigint;
-		ss >> str;
-		return str;
-	}
+        ss << bigint;
+        ss >> str;
+        return str;
+    }
 
-	class PublicKeyString{
-	public:
-		std::string Modulus_n;
-		std::string PublicExponent_e;
-	public:
-	    PublicKeyString() {}
-		PublicKeyString(RSA::PublicKey key){
-			Modulus_n = BigInt2Str(key.GetModulus());
-			PublicExponent_e = BigInt2Str(key.GetPublicExponent());
-		}
-		RSA::PublicKey toRSA_PublicKey(){
-			RSA::PublicKey key;
-			key.Initialize(
-				Str2BigInt(Modulus_n),
-				Str2BigInt(PublicExponent_e)
-				);
-			return key;
-		}
-		inline friend std::ostream& operator<<(std::ostream& out, PublicKeyString&	_this){
-			out << "PublicKeyString: " << std::endl;
-			out << "\tn:" << _this.Modulus_n << std::endl;
-			out << "\te:" << _this.PublicExponent_e << std::endl;
-			return out;
-		}
-	};
+    class PublicKeyString{
+    public:
+        std::string Modulus_n;
+        std::string PublicExponent_e;
+    public:
+        PublicKeyString() {}
+        PublicKeyString(RSA::PublicKey key){
+            Modulus_n = BigInt2Str(key.GetModulus());
+            PublicExponent_e = BigInt2Str(key.GetPublicExponent());
+        }
+        RSA::PublicKey toRSA_PublicKey(){
+            RSA::PublicKey key;
+            key.Initialize(
+                Str2BigInt(Modulus_n),
+                Str2BigInt(PublicExponent_e)
+                );
+            return key;
+        }
+        inline friend std::ostream& operator<<(std::ostream& out, PublicKeyString&	_this){
+            out << "PublicKeyString: " << std::endl;
+            out << "\tn:" << _this.Modulus_n << std::endl;
+            out << "\te:" << _this.PublicExponent_e << std::endl;
+            return out;
+        }
+    };
 
-	class PrivateKeyString{
-	public:
-		std::string Modulus_n;
-		std::string PublicExponent_e;
-		std::string PrivateExponent_d;
-	public:
-	    PrivateKeyString() {}
-		PrivateKeyString(RSA::PrivateKey key){
-			Modulus_n = BigInt2Str(key.GetModulus());
-			PublicExponent_e = BigInt2Str(key.GetPublicExponent());
-			PrivateExponent_d = BigInt2Str(key.GetPrivateExponent());
-		}
-		RSA::PrivateKey toRSA_PrivateKey(){
-			RSA::PrivateKey key;
-			key.Initialize(
-				Str2BigInt(Modulus_n),
-				Str2BigInt(PublicExponent_e),
-				Str2BigInt(PrivateExponent_d)
-				);
-			return key;
-		}
-		inline friend std::ostream& operator<<(std::ostream& out, PrivateKeyString&	_this){
-			out << "PrivateKeyString: " << std::endl;
-			out << "\tn:" << _this.Modulus_n << std::endl;
-			out << "\te:" << _this.PublicExponent_e << std::endl;
-			out << "\td:" << _this.PrivateExponent_d << std::endl;
-			return out;
-		}
-	};
+    class PrivateKeyString{
+    public:
+        std::string Modulus_n;
+        std::string PublicExponent_e;
+        std::string PrivateExponent_d;
+    public:
+        PrivateKeyString() {}
+        PrivateKeyString(RSA::PrivateKey key){
+            Modulus_n = BigInt2Str(key.GetModulus());
+            PublicExponent_e = BigInt2Str(key.GetPublicExponent());
+            PrivateExponent_d = BigInt2Str(key.GetPrivateExponent());
+        }
+        RSA::PrivateKey toRSA_PrivateKey(){
+            RSA::PrivateKey key;
+            key.Initialize(
+                Str2BigInt(Modulus_n),
+                Str2BigInt(PublicExponent_e),
+                Str2BigInt(PrivateExponent_d)
+                );
+            return key;
+        }
+        inline friend std::ostream& operator<<(std::ostream& out, PrivateKeyString&	_this){
+            out << "PrivateKeyString: " << std::endl;
+            out << "\tn:" << _this.Modulus_n << std::endl;
+            out << "\te:" << _this.PublicExponent_e << std::endl;
+            out << "\td:" << _this.PrivateExponent_d << std::endl;
+            return out;
+        }
+    };
 
-	typedef std::pair<PublicKeyString, PrivateKeyString> KeyPairString;
+    typedef std::pair<PublicKeyString, PrivateKeyString> KeyPairString;
 
-	inline KeyPairString RandomlyGenerateKey(){
-		AutoSeededRandomPool rng;
-		rng.Reseed();
-		InvertibleRSAFunction parameters;
-		parameters.GenerateRandomWithKeySize(rng, 1024);
-		RSA::PrivateKey privateKey(parameters);
-		RSA::PublicKey publicKey(parameters);
-		return std::make_pair(
-			PublicKeyString(publicKey),
-			PrivateKeyString(privateKey)
-			);
-	}
-	inline std::string SignMessage(std::string message, PrivateKeyString privateKey){
-		return Signature::SignMessage(message, privateKey.toRSA_PrivateKey());
-	}
-	inline bool Verify(std::string message, std::string signature, PublicKeyString publicKey){
-		return Signature::Verify(message, signature, publicKey.toRSA_PublicKey());
-	}
+    inline KeyPairString RandomlyGenerateKey(){
+        AutoSeededRandomPool rng;
+        rng.Reseed();
+        InvertibleRSAFunction parameters;
+        parameters.GenerateRandomWithKeySize(rng, 1024);
+        RSA::PrivateKey privateKey(parameters);
+        RSA::PublicKey publicKey(parameters);
+        return std::make_pair(
+            PublicKeyString(publicKey),
+            PrivateKeyString(privateKey)
+            );
+    }
 
+    inline std::vector<byte> SignMessage(std::string message, PrivateKeyString privateKey){
+        std::string s = Signature::SignMessage(message, privateKey.toRSA_PrivateKey());
+
+        std::vector<byte> _signed_message;
+        for (int i = 0; i < s.length(); ++i)
+            _signed_message.push_back((byte)(s[i]));
+        return _signed_message;
+    }
+    inline bool Verify(std::string message, std::vector<byte> signature, PublicKeyString publicKey){
+        std::string _signed_message;
+        //_signed_message.append()
+        for (int i = 0; i < signature.size(); ++i)
+            _signed_message.push_back((char)(signature[i]));
+            // 不太确定 string::push_back 如何处理结尾的\0 但是测试没问题
+
+        return Signature::Verify(message, _signed_message, publicKey.toRSA_PublicKey());
+    }
+
+    // TODO: change api param type from string to vector<byte>
 	void Generate(const FunctionCallbackInfo<v8::Value> &args) {
         KeyPairString pairStr = RandomlyGenerateKey();
         PublicKeyString pubStr = pairStr.first;
@@ -188,6 +202,7 @@ namespace SignatureJsonStrAPI{
         args.GetReturnValue().Set(obj);
     }
 
+    // TODO: change api param type from string to vector<byte>
 	void _SignMessage(const FunctionCallbackInfo<v8::Value> &args) {
         v8::Local<v8::Object> params = args[0]->ToObject();
         v8::Local<v8::Object> priObj = params->Get(Nan::New("key").ToLocalChecked())->ToObject();
@@ -204,12 +219,12 @@ namespace SignatureJsonStrAPI{
         text = params->Get(Nan::New("message").ToLocalChecked())->ToString();
         t = std::string(*(v8::String::Utf8Value(text)));
 
-        std::string secret = SignMessage(t, priStr);
-        std::cerr << secret << std::endl;
-        char* _secret = new char[secret.length() + 1];
-        secret.copy(_secret, secret.length(), 0);
-        Nan::MaybeLocal<v8::Object> message = Nan::NewBuffer(_secret, secret.length());
-        args.GetReturnValue().Set(message.ToLocalChecked());
+        std::vector<byte> secret = SignMessage(t, priStr);
+        v8::Local<v8::Array> _secret = Nan::New<v8::Array>();
+        for(int i = 0; i < secret.size(); i++) {
+            _secret->Set(i, Nan::New(secret[i]));
+        }
+        args.GetReturnValue().Set(_secret);
     }
 
     void VerifyMessage(const FunctionCallbackInfo<v8::Value> &args) {
@@ -224,10 +239,12 @@ namespace SignatureJsonStrAPI{
         pubStr.PublicExponent_e = t;
         text = params->Get(Nan::New("message").ToLocalChecked())->ToString();
         std::string message = std::string(*(v8::String::Utf8Value(text)));
-        text = params->Get(Nan::New("signature").ToLocalChecked())->ToString();
-        std::string signature = std::string(*(v8::String::Utf8Value(text)));
-        std::cerr << signature << std::endl;
-        v8::Local<v8::Boolean> valid = Nan::New(Verify(message, signature, pubStr));
+        v8::Local<v8::Array> signature = v8::Local<v8::Array>::Cast(params->Get(Nan::New("signature").ToLocalChecked()));
+        std::vector<byte> _signature;
+        for(int i = 0; i < signature->Length(); i++) {
+            _signature.push_back(signature->Get(i)->NumberValue());
+        }
+        v8::Local<v8::Boolean> valid = Nan::New(Verify(message, _signature, pubStr));
         args.GetReturnValue().Set(valid);
     }
 }

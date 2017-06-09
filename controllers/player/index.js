@@ -51,8 +51,12 @@ module.exports = function (io) {
                 if (global.gameData.can_start()) {
                     setTimeout(function () {
                         global.gameData.start();
-                        socket.broadcast.emit('start', global.gameData.case);
-                        socket.emit('start', {});
+                        var cases = {};
+                        for(var key in global.gameData.case) {
+                            cases[key] = {id: key, location: global.gameData.case[key].initial_location};
+                        }
+                        socket.broadcast.emit('start', cases);
+                        socket.emit('start', cases);
                     }, 2000);
                 }
 

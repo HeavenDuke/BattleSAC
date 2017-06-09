@@ -3,6 +3,7 @@
  */
 
 var Player = require('./Player');
+var Case = require('./Case');
 var random = require('../libs/rand');
 var authentication = require('../libs').authentication;
 
@@ -10,10 +11,12 @@ var Game = function () {
     this.max_player_count = 2;
     this.player_count = 0;
     this.players = {};
-    this.case = [];
+    this.case = {};
     this.started = false;
     var titles = [[0, 1, 2], [0, 1, 2]];
     var position = 0;
+    this.case[random.rand_int(0, 100)] = new Case(213, 1);
+    this.case[random.rand_int(100, 200)] = new Case(214, 1);
     for(var i = 0; i < this.max_player_count; i++) {
         this.players[i] = new Player(i, titles[position][i], position, authentication.generateKey());
         position = 1 - position;
@@ -47,7 +50,6 @@ Game.prototype.can_start = function () {
 };
 
 Game.prototype.start = function () {
-    this.case = [];
     this.started = true;
 };
 

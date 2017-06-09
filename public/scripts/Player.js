@@ -64,5 +64,17 @@ require([], function () {
         }
     });
 
+    Q.Sprite.extend('Case', {
+        init: function (p) {
+            this._super(p, {
+                sheet: 'ghost'
+            });
+            this.on("touch");
+        },
+        touch: function (touch) {
+            switchMenu("case", {self: selfId, caseId: this.p.caseId});
+        }
+    });
+
 });
 
