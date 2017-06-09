@@ -31,7 +31,7 @@ module.exports = function (io) {
                 });
 
                 socket.on('authentication', function (data) {
-                    var message = global.gameData.players[data.playerId].position;
+                    var message = global.gameData.players[data.playerId].code;
                     var secret = authentication.signMessage({
                         key: global.gameData.players[data.playerId].key.private,
                         message: message
@@ -39,7 +39,7 @@ module.exports = function (io) {
                     var valid = false;
                     for(var id in global.gameData.players[data.self].public_keys) {
                         var key = global.gameData.players[data.self].public_keys[id];
-                        if (authentication.verifyMessage({signature: secret, message: message, key: key})) {
+                        if (authentication.verifyMessage({signature: secret, message: global.gameData.players[data.self].code, key: key})) {
                             valid = true;
                             global.gameData.players[data.self].authenticated.push(id);
                             break;
