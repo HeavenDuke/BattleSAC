@@ -184,7 +184,6 @@ namespace SignatureJsonStrAPI{
         return Signature::Verify(message, _signed_message, publicKey.toRSA_PublicKey());
     }
 
-    // TODO: change api param type from string to vector<byte>
 	void Generate(const FunctionCallbackInfo<v8::Value> &args) {
         KeyPairString pairStr = RandomlyGenerateKey();
         PublicKeyString pubStr = pairStr.first;
@@ -202,7 +201,6 @@ namespace SignatureJsonStrAPI{
         args.GetReturnValue().Set(obj);
     }
 
-    // TODO: change api param type from string to vector<byte>
 	void _SignMessage(const FunctionCallbackInfo<v8::Value> &args) {
         v8::Local<v8::Object> params = args[0]->ToObject();
         v8::Local<v8::Object> priObj = params->Get(Nan::New("key").ToLocalChecked())->ToObject();
