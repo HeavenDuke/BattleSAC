@@ -6,12 +6,12 @@ var authentication = require('../../libs').authentication;
 
 module.exports = function (io) {
     io.on('connection', function (socket) {
+        console.log(2333);
         var player = global.gameData.distribute_player();
         if (player) {
             global.gameData.player_count++;
             global.gameData.players[player.id].socket = socket;
             setTimeout(function () {
-                console.log(global.gameData.player_count);
                 socket.broadcast.emit('join', { playerCount: global.gameData.player_count });
                 socket.emit('join', { playerCount: global.gameData.player_count });
                 socket.emit('connected', player.basicInfo());
@@ -40,8 +40,13 @@ module.exports = function (io) {
                     for(var id in global.gameData.players[data.self].public_keys) {
                         var key = global.gameData.players[data.self].public_keys[id];
                         if (authentication.verifyMessage({signature: secret, message: global.gameData.players[data.self].code, key: key})) {
-                            valid = true;
-                            global.gameData.players[data.self].authenticated.push(id);
+                            if (!global.gameData.players[data.self].authenticated.includes(id)) {
+                                valid = true;
+                                global.gameData.players[data.self].authenticated.push(id);
+                            }
+                            else {
+                                valid = false;
+                            }
                             break;
                         }
                     }

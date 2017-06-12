@@ -31,6 +31,8 @@ using CryptoPP::AutoSeededRandomPool;
 #include "secblock.h"
 using CryptoPP::SecByteBlock;
 
+#include "hex.h"
+
 using namespace Nan;
 
 #pragma comment(lib,"cryptlib.lib")
@@ -184,7 +186,9 @@ namespace SignatureJsonStrAPI{
         return Signature::Verify(message, _signed_message, publicKey.toRSA_PublicKey());
     }
 
-    std::string Voter::Decrypt(PrivateKeyString privKey,const std::vector<byte>& ss) {
+    std::string Decrypt(PrivateKeyString privKey,const std::vector<byte>& ss) {
+        AutoSeededRandomPool m_rng;
+        m_rng.Reseed();
         std::string recovered = "";
         CryptoPP::RSAES_OAEP_SHA_Decryptor d(privKey.toRSA_PrivateKey());
         std::string s = "";
@@ -193,7 +197,6 @@ namespace SignatureJsonStrAPI{
         }
 
         int nCiphertextLength = d.FixedCiphertextLength() * 2;
-
         for (int i = s.size(), j = 0; i > 0; i -= nCiphertextLength, j += nCiphertextLength) {
             std::string partCipher = s.substr(j, nCiphertextLength);
             std::string partPlain;
@@ -201,44 +204,34 @@ namespace SignatureJsonStrAPI{
                 new CryptoPP::PK_DecryptorFilter(m_rng, d, new CryptoPP::StringSink(partPlain))));
             recovered += partPlain;
         }
-
-        //CryptoPP::StringSource ss2(s, true,
-        //  new CryptoPP::PK_DecryptorFilter(m_rng, d,
-        //      new CryptoPP::StringSink(recovered)
-        //      ) // PK_DecryptorFilter
-        //  ); // StringSource
+        std::cerr << recovered << std::endl;
         return recovered;
-}
-
-std::vector<byte> Voter::Encrypt(PublicKeyString pubKey ,const std::string& s) {
-    std::string cipher = "";
-
-    CryptoPP::RSAES_OAEP_SHA_Encryptor e(pubKey.toRSA_PublicKey());
-
-    int nMaxMsgLength = e.FixedMaxPlaintextLength();
-
-    for (int i = s.size(), j = 0; i > 0; i -= nMaxMsgLength, j += nMaxMsgLength) {
-        std::string partPlain = s.substr(j, nMaxMsgLength);
-        std::string partCipher;
-        CryptoPP::StringSource(partPlain, true,
-            new CryptoPP::PK_EncryptorFilter(m_rng, e,
-                new CryptoPP::HexEncoder(new CryptoPP::StringSink(partCipher))));
-        cipher += partCipher;
     }
 
-    //CryptoPP::StringSource ss1(s, true,
-    //  new CryptoPP::PK_EncryptorFilter(m_rng, e,
-    //      new CryptoPP::StringSink(cipher)
-    //      ) // PK_EncryptorFilter
-    //  ); // StringSource
+    std::vector<byte> Encrypt(PublicKeyString pubKey ,const std::string& s) {
+        AutoSeededRandomPool m_rng;
+        m_rng.Reseed();
+        std::string cipher = "";
+        std::cout << s << std::endl;
+        CryptoPP::RSAES_OAEP_SHA_Encryptor e(pubKey.toRSA_PublicKey());
 
-    std::vector<byte> res;
-    for(int i = 0 ; i < cipher.size() ; i++ ) {
-        res.push_back(byte(res[i]));
+        int nMaxMsgLength = e.FixedMaxPlaintextLength();
+
+        for (int i = s.size(), j = 0; i > 0; i -= nMaxMsgLength, j += nMaxMsgLength) {
+            std::string partPlain = s.substr(j, nMaxMsgLength);
+            std::string partCipher;
+            CryptoPP::StringSource(partPlain, true, new CryptoPP::PK_EncryptorFilter(m_rng, e,new CryptoPP::HexEncoder(new CryptoPP::StringSink(partCipher))));
+            cipher += partCipher;
+        }
+
+        std::vector<byte> res;
+        for(int i = 0 ; i < cipher.size() ; i++ ) {
+            res.push_back(byte(cipher[i]));
+        }
+
+        return res;
     }
 
-    return res;
-}
 
 	void Generate(const FunctionCallbackInfo<v8::Value> &args) {
         KeyPairString pairStr = RandomlyGenerateKey();
@@ -301,12 +294,60 @@ std::vector<byte> Voter::Encrypt(PublicKeyString pubKey ,const std::string& s) {
         v8::Local<v8::Boolean> valid = Nan::New(Verify(message, _signature, pubStr));
         args.GetReturnValue().Set(valid);
     }
+
+    void DecryptMessage(const FunctionCallbackInfo<v8::Value> &args) {
+        v8::Local<v8::Object> params = args[0]->ToObject();
+        v8::Local<v8::Object> priObj = params->Get(Nan::New("key").ToLocalChecked())->ToObject();
+        PrivateKeyString priStr = PrivateKeyString();
+        v8::Local<v8::String> text = priObj->Get(Nan::New("n").ToLocalChecked())->ToString();
+        std::string t = std::string(*(v8::String::Utf8Value(text)));
+        priStr.Modulus_n = t;
+        text = priObj->Get(Nan::New("e").ToLocalChecked())->ToString();
+        t = std::string(*(v8::String::Utf8Value(text)));
+        priStr.PublicExponent_e = t;
+        text = priObj->Get(Nan::New("d").ToLocalChecked())->ToString();
+        t = std::string(*(v8::String::Utf8Value(text)));
+        priStr.PrivateExponent_d = t;
+        text = params->Get(Nan::New("message").ToLocalChecked())->ToString();
+        t = std::string(*(v8::String::Utf8Value(text)));
+
+        v8::Local<v8::Array> message = v8::Local<v8::Array>::Cast(params->Get(Nan::New("message").ToLocalChecked()));
+        std::vector<byte> _message;
+        for(int i = 0; i < message->Length(); i++) {
+            _message.push_back(message->Get(i)->NumberValue());
+        }
+        v8::Local<v8::String> result = Nan::New(Decrypt(priStr, _message)).ToLocalChecked();
+        args.GetReturnValue().Set(result);
+    }
+
+    void EncryptMessage(const FunctionCallbackInfo<v8::Value> &args) {
+        v8::Local<v8::Object> params = args[0]->ToObject();
+        v8::Local<v8::Object> pubObj = params->Get(Nan::New("key").ToLocalChecked())->ToObject();
+        PublicKeyString pubStr = PublicKeyString();
+        v8::Local<v8::String> text = pubObj->Get(Nan::New("n").ToLocalChecked())->ToString();
+        std::string t = std::string(*(v8::String::Utf8Value(text)));
+        pubStr.Modulus_n = t;
+        text = pubObj->Get(Nan::New("e").ToLocalChecked())->ToString();
+        t = std::string(*(v8::String::Utf8Value(text)));
+        pubStr.PublicExponent_e = t;
+        text = params->Get(Nan::New("message").ToLocalChecked())->ToString();
+        std::string message = std::string(*(v8::String::Utf8Value(text)));
+
+        std::vector<byte> secret = Encrypt(pubStr, message);
+        v8::Local<v8::Array> _secret = Nan::New<v8::Array>();
+        for(int i = 0; i < secret.size(); i++) {
+            _secret->Set(i, Nan::New(secret[i]));
+        }
+        args.GetReturnValue().Set(_secret);
+    }
 }
 
 void init(v8::Local<v8::Object> exports) {
     exports->Set(Nan::New("generateKey").ToLocalChecked(), Nan::New<v8::FunctionTemplate>(SignatureJsonStrAPI::Generate)->GetFunction());
     exports->Set(Nan::New("signMessage").ToLocalChecked(), Nan::New<v8::FunctionTemplate>(SignatureJsonStrAPI::_SignMessage)->GetFunction());
     exports->Set(Nan::New("verifyMessage").ToLocalChecked(), Nan::New<v8::FunctionTemplate>(SignatureJsonStrAPI::VerifyMessage)->GetFunction());
+    exports->Set(Nan::New("encryptMessage").ToLocalChecked(), Nan::New<v8::FunctionTemplate>(SignatureJsonStrAPI::EncryptMessage)->GetFunction());
+    exports->Set(Nan::New("decryptMessage").ToLocalChecked(), Nan::New<v8::FunctionTemplate>(SignatureJsonStrAPI::DecryptMessage)->GetFunction());
 }
 
 NODE_MODULE(authentication, init)

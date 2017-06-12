@@ -15,6 +15,8 @@ var Player = function (id, title, position, key, caseKey, code) {
     this.key = key;
     this.caseKeys = [caseKey];
     this.authenticated = [];
+    this.compared_times = 0;
+    this.parent = id;
     this.unauthenticated = [];
     this.public_keys = {};
 };

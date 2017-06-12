@@ -10,12 +10,12 @@ var authentication = require('../libs').authentication;
 
 var md5 = function (text) {
     var enc = crypto.createHash('md5');
-    enc.update(test);
+    enc.update(text);
     return enc.digest('hex');
 };
 
 var Game = function () {
-    this.max_player_count = 2;
+    this.max_player_count = 4;
     this.player_count = 0;
     this.players = {};
     this.case = {};

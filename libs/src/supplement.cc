@@ -177,6 +177,13 @@ namespace Lagrange{
 			ThisType adjoint(){
 
 				ThisType ret(mN);
+
+				if (1==mN){
+                    ret(0, 0) = 1;
+                    return ret;
+                }
+
+
 				for (int i = 0; i < mN; ++i)
 				for (int j = 0; j < mN; ++j)
 					ret(i, j) = this->algebraic_cofactor(i, j);
