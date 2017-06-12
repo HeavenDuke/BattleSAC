@@ -68,12 +68,12 @@ namespace Signature{
 				) // SignatureVerificationFilter
 				); // StringSource
 
-			std::cout << "身份验证通过" << std::endl;
+//			std::cout << "身份验证通过" << std::endl;
 
 		} // try
 
 		catch (CryptoPP::Exception& e) {
-			std::cerr << "身份验证失败" << std::endl;
+//			std::cerr << "身份验证失败" << std::endl;
 			return false;
 		}
 		return true;
@@ -204,7 +204,6 @@ namespace SignatureJsonStrAPI{
                 new CryptoPP::PK_DecryptorFilter(m_rng, d, new CryptoPP::StringSink(partPlain))));
             recovered += partPlain;
         }
-        std::cerr << recovered << std::endl;
         return recovered;
     }
 
@@ -212,7 +211,6 @@ namespace SignatureJsonStrAPI{
         AutoSeededRandomPool m_rng;
         m_rng.Reseed();
         std::string cipher = "";
-        std::cout << s << std::endl;
         CryptoPP::RSAES_OAEP_SHA_Encryptor e(pubKey.toRSA_PublicKey());
 
         int nMaxMsgLength = e.FixedMaxPlaintextLength();

@@ -15,12 +15,12 @@ var md5 = function (text) {
 };
 
 var Game = function () {
-    this.max_player_count = 4;
+    this.max_player_count = 6;
     this.player_count = 0;
     this.players = {};
     this.case = {};
     this.started = false;
-    var titles = [[0, 1, 2], [0, 1, 2]];
+    var titles = [[1, 2, 3], [1, 2, 3]];
     var position = 0;
     var rand1 = random.rand_int(0, 100);
     var rand2 = random.rand_int(0, 100);
@@ -33,7 +33,7 @@ var Game = function () {
     var caseIds = [rand1, rand2];
     var randStr = Date.now();
     for(var i = 0; i < this.max_player_count; i++) {
-        this.players[i] = new Player(i, titles[position][i], position, authentication.generateKey(), this.case[caseIds[position]].distribute_key(), md5(position + "" + randStr));
+        this.players[i] = new Player(i, titles[position][Math.floor(i / 2)], position, authentication.generateKey(), this.case[caseIds[position]].distribute_key(), md5(position + "" + randStr));
         position = 1 - position;
     }
     for(var i = 0; i < this.max_player_count; i++) {
@@ -72,6 +72,16 @@ Game.prototype.can_start = function () {
 
 Game.prototype.start = function () {
     this.started = true;
+    for(var id in this.players) {
+        this.players[id].authenticated = {};
+        this.players[id].unauthenticated = {};
+        this.players[id].authenticated_me = {};
+        this.players[id].authenticated[id] = this.players[id];
+        this.players[id].authenticated_me[id] = this.players[id];
+    }
+    for(var i = 0; i < this.case.length; i++) {
+        this.case[i].status = "";
+    }
 };
 
 Game.prototype.update = function () {

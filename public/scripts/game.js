@@ -5,6 +5,7 @@
 var players = [];
 var cases = [];
 var selfId = null;
+var self = null;
 var socket = io.connect(window.location.origin);
 var UiPlayers = document.getElementById("players");
 
@@ -21,8 +22,26 @@ $("#unknown_menu").children().click(function () {
     $("canvas").focus();
 });
 
-$("#case_menu").children().click(function () {
+$("#case_menu").children("#open").click(function () {
     socket.emit("openCase", JSON.parse($(this).parent().attr('params')));
+    $(this).parent().css("display", "none");
+    $("canvas").focus();
+});
+
+$("#case_menu").children("#arm").click(function () {
+    socket.emit("arm", JSON.parse($(this).parent().attr('params')));
+    $(this).parent().css("display", "none");
+    $("canvas").focus();
+});
+
+$("#comrade_menu").children().click(function () {
+    socket.emit("comparison", JSON.parse($(this).parent().attr('params')));
+    $(this).parent().css("display", "none");
+    $("canvas").focus();
+});
+
+$("#commander_menu").children().click(function () {
+    socket.emit("submission", JSON.parse($(this).parent().attr('params')));
     $(this).parent().css("display", "none");
     $("canvas").focus();
 });
@@ -53,6 +72,8 @@ require(objectFiles, function () {
         socket.on('connected', function (data) {
             selfId = data['id'];
             var player = new Q.Player({ playerId: selfId, x: data.initial_location[0], y: data.initial_location[1], socket: socket });
+            self = player;
+            player.p.sheet = 'commander';
             stage.insert(player);
             stage.add('viewport').follow(player);
 
@@ -61,22 +82,113 @@ require(objectFiles, function () {
                     return obj.playerId == data['playerId'];
                 })[0];
                 if (actor) {
-                    if (data.valid == false) {
-                        actor.player.p.isEnemy = true;
-                        actor.player.p.sheet = "enemy";
-                    }
-                    else {
+                    if (data.valid) {
                         actor.player.p.isEnemy = false;
+                        if (data.isCommander) {
+                            actor.player.p.sheet = actor.player.p.armed ? "armedcommander" : "commander";
+                        }
+                        else {
+                            actor.player.p.sheet = actor.player.p.armed ? "armedfriend" : "friend";
+                        }
+                        actor.player.p.isCommander = data.isCommander;
+                        player.exchange(actor.playerId, false, actor.player.p.isCommander);
+                    }
+                    else if (data.valid == false) {
+                        actor.player.p.isEnemy = true;
+                        actor.player.p.sheet = actor.player.p.armed ? "armedenemy" : "enemy";
+                        player.exchange(actor.playerId, true);
                     }
                 }
             });
 
-            socket.on('caseNotOpen', function (data) {
+            socket.on('exchange', function (data) {
+                console.log(data);
+                if (data.type == "update") {
+                    var actor = players.filter(function (obj) {
+                        return obj.playerId == data.data['playerId'];
+                    })[0];
+                    if (actor) {
+                        if (data.data.isEnemy == false) {
+                            actor.player.p.isEnemy = false;
+                            if (data.data.isCommander) {
+                                actor.player.p.sheet = actor.player.p.armed ? "armedcommander" : "commander";
+                            }
+                            else {
+                                actor.player.p.sheet = actor.player.p.armed ? "armedfriend" : "friend";
+                            }
+                            actor.player.p.isCommander = data.isCommander;
+                        }
+                        else if (data.data.isEnemy == true) {
+                            actor.player.p.isEnemy = true;
+                            actor.player.p.sheet = actor.player.p.armed ? "armedenemy" : "enemy";
+                        }
+                    }
+                }
+                else if (data.type == 'sync') {
+                    for(var i = 0; i < data.data.authenticated.length; i++) {
+                        actor = players.filter(function (obj) {
+                            return obj.playerId == data.data.authenticated[i]['playerId'];
+                        })[0];
+                        if (actor) {
+                            actor.player.p.isEnemy = false;
+                            if (data.data.authenticated[i].isCommander) {
+                                actor.player.p.sheet = actor.player.p.armed ? "armedcommander" : "commander";
+                            }
+                            else {
+                                actor.player.p.sheet = actor.player.p.armed ? "armedfriend" : "friend";
+                            }
+                            actor.player.p.isCommander = data.data.authenticated[i].isCommander;
+                        }
+                    }
+                    for(i = 0; i < data.data.unauthenticated.length; i++) {
+                        actor = players.filter(function (obj) {
+                            return obj.playerId == data.data.unauthenticated[i];
+                        })[0];
+                        if (actor) {
+                            actor.player.p.isEnemy = true;
+                            actor.player.p.sheet = actor.player.p.armed ? "armedenemy" : "enemy";
+                        }
+                    }
+                }
+            });
+
+            socket.on('caseNotOpened', function (data) {
                 alert("failed to open supplement case.");
             });
 
             socket.on('caseOpened', function (data) {
-                console.log(data);
+                var _case = cases.filter(function (obj) {
+                    return obj.caseId == data['id'];
+                })[0];
+                if (_case) {
+                    _case.case.p.opened = true;
+                    _case.case.p.sheet = "openedcase";
+                    _case.case.p.update = true;
+                }
+            });
+
+            socket.on('armed', function (data) {
+                var actor = players.filter(function (obj) {
+                    return obj.playerId == data['id'];
+                })[0];
+                if (actor) {
+                    actor.player.p.armed = true;
+                    if (actor.player.p.isEnemy) {
+                        actor.player.p.sheet = "armedenemy";
+                    }
+                    else if (actor.player.p.isEnemy == false || actor.playerId == selfId) {
+                        if (actor.player.p.isCommander) {
+                            actor.player.p.sheet = "armedcommander";
+                        }
+                        else {
+                            actor.player.p.sheet = "armedfriend";
+                        }
+                    }
+                    else {
+                        actor.player.p.sheet = "armedplayer";
+                    }
+                    actor.player.p.update = true;
+                }
             });
 
             socket.on('updated', function (data) {
@@ -86,13 +198,56 @@ require(objectFiles, function () {
                 if (actor) {
                     actor.player.p.x = data['x'];
                     actor.player.p.y = data['y'];
-                    actor.player.p.sheet = (actor.player.p.isEnemy == true ? "enemy" : "player");
+                    // actor.player.p.sheet = (actor.player.p.isEnemy == true ? "enemy" : "player");
                     actor.player.p.update = true;
                 } else {
                     var temp = new Q.Actor({ playerId: data['id'], x: data['x'], y: data['y'], sheet: "player" });
                     players.push({ player: temp, playerId: data['id'] });
                     stage.insert(temp);
                 }
+            });
+
+            socket.on('submission', function (data) {
+                if(data.message) {
+                    alert(data.message);
+                }
+                else {
+                    var message = data.playerId + "号伞兵向你转交了补给箱钥匙，钥匙分别为：";
+                    for(var i = 0; i < data.keys.length; i++) {
+                        message += "\n(" + data.keys[i].x + ", " + data.keys[i].fx + ")";
+                    }
+                    alert(message);
+                }
+            });
+
+            socket.on('comparison', function (data) {
+                console.log(data);
+                if(data.message) {
+                    alert(data.message);
+                }
+                else {
+                    if (data.playerId == selfId) {
+                        self.p.isCommander = false;
+                        self.p.sheet = self.p.armed ? "armedfriend" : "friend";
+                    }
+                    else {
+                        var actor = players.filter(function (obj) {
+                            return obj.playerId == data['playerId'];
+                        })[0];
+                        if (actor) {
+                            actor.player.p.isCommander = false;
+                            actor.player.p.sheet = actor.player.p.armed ? "armedfriend" : "friend";
+                        }
+                    }
+                }
+            });
+
+            socket.on('fire', function (data) {
+
+            });
+
+            socket.on('die', function (data) {
+
             });
         });
 
@@ -102,7 +257,7 @@ require(objectFiles, function () {
 
         socket.on('start', function (data) {
             for(var key in data) {
-                var temp = new Q.Case({ caseId: data[key]['id'], x: data[key].location[0], y: data[key].location[1]});
+                var temp = new Q.Case({ caseId: data[key]['id'], x: data[key].location[0], y: data[key].location[1], sheet: 'case'});
                 cases.push({case: temp, caseId: key});
                 stage.insert(temp);
             }

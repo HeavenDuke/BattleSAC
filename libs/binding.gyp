@@ -28,7 +28,8 @@
             ],
             "include_dirs": [
             	"<!(node -e \"require('nan')\")",
-            	"/usr/include/cryptopp"
+            	"/usr/include/cryptopp",
+            	"./Millionaire"
             ]
         }
     ]

@@ -1,1 +1,56 @@
-{"player":{"sx":0,"sy":0,"cols":1,"tilew":30,"tileh":30,"frames":1},"enemy":{"sx":0,"sy":30,"cols":1,"tilew":30,"tileh":24,"frames":1},"ghost":{"sx":0,"sy":54,"cols":1,"tilew":30,"tileh":30,"frames":1}}
+{
+  "player": {
+    "sx": 0,
+    "sy": 0,
+    "tilew": 30,
+    "tileh": 30
+  },
+  "friend": {
+    "sx": 30,
+    "sy": 0,
+    "tilew": 30,
+    "tileh": 30
+  },
+  "armedfriend": {
+    "sx": 90,
+    "sy": 30,
+    "tilew": 30,
+    "tileh": 30
+  },
+  "commander": {
+    "sx": 60,
+    "sy": 0,
+    "tilew": 30,
+    "tileh": 30
+  },
+  "armedcommander": {
+    "sx": 90,
+    "sy": 0,
+    "tilew": 30,
+    "tileh": 30
+  },
+  "enemy": {
+    "sx": 0,
+    "sy": 30,
+    "tilew": 30,
+    "tileh": 24
+  },
+  "armedenemy": {
+    "sx": 30,
+    "sy": 30,
+    "tilew": 30,
+    "tileh": 24
+  },
+  "case": {
+    "sx": 0,
+    "sy": 54,
+    "tilew": 30,
+    "tileh": 30
+  },
+  "openedcase": {
+    "sx": 30,
+    "sy": 54,
+    "tilew": 30,
+    "tileh": 30
+  }
+}

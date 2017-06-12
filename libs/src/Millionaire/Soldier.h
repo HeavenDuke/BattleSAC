@@ -2,8 +2,13 @@
 #include "rsa.h"
 #include "osrng.h"
 #include "nbtheory.h"
+
+#include <iostream>
+#include <sstream>
+
 using namespace CryptoPP;
 
+using namespace std;
 
 inline CryptoPP::Integer Str2BigInt(std::string str) {
 	return CryptoPP::Integer(str.c_str());
