@@ -1,9 +1,5 @@
 #include "Soldier.h"
 
-Soldier::Soldier()
-{
-}
-
 Soldier::Soldier(int _title)
 {
 	title = _title;
@@ -21,6 +17,14 @@ Soldier::Soldier(int _title)
 	privateKey = _privateKey;
 
 	random = 0;
+}
+
+Soldier::Soldier(int _title, PublicKeyString publicKeyString, PrivateKeyString privateKeyString)
+{
+	title = _title;
+	nbits = 512;
+	publicKey = publicKeyString.toRSA_PublicKey();
+	privateKey = privateKeyString.toRSA_PrivateKey();
 }
 
 RSA::PublicKey Soldier::GetPublicKey()
