@@ -31,36 +31,41 @@ module.exports = function (io) {
                 });
 
                 socket.on('authentication', function (data) {
-                    var message = global.gameData.players[data.playerId].code;
-                    var secret = authentication.signMessage({
-                        key: global.gameData.players[data.playerId].key.private,
-                        message: message
-                    });
-                    var valid = false;
-                    for (var id in global.gameData.players[data.self].public_keys) {
-                        var key = global.gameData.players[data.self].public_keys[id];
-                        if (authentication.verifyMessage({
-                                signature: secret,
-                                message: global.gameData.players[data.self].code,
-                                key: key
-                            })) {
-                            if (!global.gameData.players[data.self].authenticated[id]) {
-                                valid = true;
-                                global.gameData.players[data.self].authenticated[id] = global.gameData.players[id];
-                                global.gameData.players[data.playerId].authenticated_me[data.self] = global.gameData.players[data.self];
+                    var target = global.gameData.players[data.playerId];
+                    function auth(player1, player2) {
+                        var message = player2.code;
+                        var secret = authentication.signMessage({
+                            key: player2.key.private,
+                            message: message
+                        });
+                        var valid = false;
+                        for (var id in player1.public_keys) {
+                            var key = player1.public_keys[id];
+                            if (authentication.verifyMessage({
+                                    signature: secret,
+                                    message: player1.code,
+                                    key: key
+                                })) {
+                                if (!player1.authenticated[id]) {
+                                    valid = true;
+                                    player1.authenticated[id] = global.gameData.players[id];
+                                    player2.authenticated_me[player1.id] = player1;
+                                }
+                                socket.emit('authentication', {
+                                    playerId: player2.id,
+                                    valid: valid,
+                                    isCommander: player2.parent == player2.id
+                                });
+                                break;
                             }
-                            socket.emit('authentication', {
-                                playerId: data.playerId,
-                                valid: valid,
-                                isCommander: global.gameData.players[data.playerId].parent == global.gameData.players[data.playerId].id
-                            });
-                            break;
+                        }
+                        if (valid == false) {
+                            player1.unauthenticated[player2.id] = player2;
+                            player1.socket.emit('authentication', {playerId: player2.id, valid: valid});
                         }
                     }
-                    if (valid == false) {
-                        global.gameData.players[data.self].unauthenticated[data.playerId] = global.gameData.players[data.playerId];
-                        socket.emit('authentication', {playerId: data.playerId, valid: valid});
-                    }
+                    auth(player, target);
+                    auth(target, player);
                 });
 
                 socket.on('openCase', function (data) {

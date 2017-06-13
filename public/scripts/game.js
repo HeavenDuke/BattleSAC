@@ -75,6 +75,7 @@ require(objectFiles, function () {
             self = player;
             player.p.sheet = 'commander';
             stage.insert(player);
+            stage.insert(player.p.nameLabel);
             stage.add('viewport').follow(player);
 
             socket.on('authentication', function (data) {
@@ -117,6 +118,10 @@ require(objectFiles, function () {
                                 actor.player.p.sheet = actor.player.p.armed ? "armedfriend" : "friend";
                             }
                             actor.player.p.isCommander = data.isCommander;
+                            if (!actor.player.p.nameVisible) {
+                                stage.insert(actor.player.p.nameLabel);
+                                actor.player.p.nameVisible = true;
+                            }
                         }
                         else if (data.data.isEnemy == true) {
                             actor.player.p.isEnemy = true;
@@ -129,7 +134,7 @@ require(objectFiles, function () {
                         actor = players.filter(function (obj) {
                             return obj.playerId == data.data.authenticated[i]['playerId'];
                         })[0];
-                        if (actor) {
+                        if (actor && actor.playerId != selfId) {
                             actor.player.p.isEnemy = false;
                             if (data.data.authenticated[i].isCommander) {
                                 actor.player.p.sheet = actor.player.p.armed ? "armedcommander" : "commander";
@@ -138,6 +143,10 @@ require(objectFiles, function () {
                                 actor.player.p.sheet = actor.player.p.armed ? "armedfriend" : "friend";
                             }
                             actor.player.p.isCommander = data.data.authenticated[i].isCommander;
+                            if (!actor.player.p.nameVisible) {
+                                stage.insert(actor.player.p.nameLabel);
+                                actor.player.p.nameVisible = true;
+                            }
                         }
                     }
                     for(i = 0; i < data.data.unauthenticated.length; i++) {
@@ -168,26 +177,37 @@ require(objectFiles, function () {
             });
 
             socket.on('armed', function (data) {
-                var actor = players.filter(function (obj) {
-                    return obj.playerId == data['id'];
-                })[0];
-                if (actor) {
-                    actor.player.p.armed = true;
-                    if (actor.player.p.isEnemy) {
-                        actor.player.p.sheet = "armedenemy";
-                    }
-                    else if (actor.player.p.isEnemy == false || actor.playerId == selfId) {
-                        if (actor.player.p.isCommander) {
-                            actor.player.p.sheet = "armedcommander";
-                        }
-                        else {
-                            actor.player.p.sheet = "armedfriend";
-                        }
+                if (data['id'] == selfId) {
+                    self.p.armed = true;
+                    if (self.p.isCommander) {
+                        self.p.sheet = "armedcommander";
                     }
                     else {
-                        actor.player.p.sheet = "armedplayer";
+                        self.p.sheet = "armedfriend";
                     }
-                    actor.player.p.update = true;
+                }
+                else {
+                    var actor = players.filter(function (obj) {
+                        return obj.playerId == data['id'];
+                    })[0];
+                    if (actor) {
+                        actor.player.p.armed = true;
+                        if (actor.player.p.isEnemy) {
+                            actor.player.p.sheet = "armedenemy";
+                        }
+                        else if (actor.player.p.isEnemy == false) {
+                            if (actor.player.p.isCommander) {
+                                actor.player.p.sheet = "armedcommander";
+                            }
+                            else {
+                                actor.player.p.sheet = "armedfriend";
+                            }
+                        }
+                        else {
+                            actor.player.p.sheet = "armedplayer";
+                        }
+                        actor.player.p.update = true;
+                    }
                 }
             });
 
@@ -200,6 +220,7 @@ require(objectFiles, function () {
                     actor.player.p.y = data['y'];
                     // actor.player.p.sheet = (actor.player.p.isEnemy == true ? "enemy" : "player");
                     actor.player.p.update = true;
+                    actor.player.updateLabel();
                 } else {
                     var temp = new Q.Actor({ playerId: data['id'], x: data['x'], y: data['y'], sheet: "player" });
                     players.push({ player: temp, playerId: data['id'] });

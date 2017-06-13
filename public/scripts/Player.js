@@ -23,6 +23,13 @@ require([], function () {
                 sheet: 'player'
             });
             this.p.update = false;
+            this.p.nameLabel = new Q.UI.Text({
+                label: this.p.playerId + "(You)",
+                color: "gray",
+                x: this.p.x,
+                y: this.p.y - 30,
+                size: 12
+            });
             this.add('2d, platformerControls, animation');
             this.on("touch");
         },
@@ -48,6 +55,8 @@ require([], function () {
                 switchMenu("none");
             }
 
+            this.updateLabel();
+
             this.p.socket.emit('update', { id: this.p.playerId, x: this.p.x, y: this.p.y, sheet: this.p.sheet });
             UiLocation.innerHTML = "Location: (" + this.p.x + ", " + this.p.y + ")";
         },
@@ -56,6 +65,10 @@ require([], function () {
         },
         touch: function (touch) {
             switchMenu("self");
+        },
+        updateLabel: function () {
+            this.p.nameLabel.p.x = this.p.x;
+            this.p.nameLabel.p.y = this.p.y - 30;
         }
     });
 
@@ -65,8 +78,17 @@ require([], function () {
                 update: true
             });
             var temp = this;
+            this.p.nameLabel = new Q.UI.Text({
+                label: this.p.playerId + "",
+                color: "gray",
+                x: this.p.x,
+                y: this.p.y - 30,
+                size: 12
+            });
+            this.p.nameVisible = false;
             setInterval(function () {
                 if (!temp.p.update) {
+                    temp.p.nameLabel.destroy();
                     temp.destroy();
                 }
                 temp.p.update = false;
@@ -85,6 +107,10 @@ require([], function () {
             else if (this.p.isEnemy != true) {
                 switchMenu("unknown", {self: selfId, playerId: this.p.playerId});
             }
+        },
+        updateLabel: function () {
+            this.p.nameLabel.p.x = this.p.x;
+            this.p.nameLabel.p.y = this.p.y - 30;
         }
     });
 
