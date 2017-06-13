@@ -19,8 +19,31 @@ module.exports = function (io) {
                 socket.on('disconnect', function () {
                     global.gameData.player_count--;
                     global.gameData.players[player.id].controlled = false;
-                    if (global.gameData.can_end()) {
-                        global.gameData.end();
+                    var left = [0, 0];
+                    for(var id in global.gameData.players) {
+                        if (global.gameData.players[id].status != 'die' && global.gameData.players[id].controlled) {
+                            left[global.gameData.players[id].position]++;
+                        }
+                    }
+                    if (left[0] == 0) {
+                        for(id in global.gameData.players) {
+                            if (global.gameData.players[id].position == 1) {
+                                global.gameData.players[id].socket.emit('win', {});
+                            }
+                            else {
+                                global.gameData.players[id].socket.emit('lose', {});
+                            }
+                        }
+                    }
+                    else if (left[1] == 0) {
+                        for(id in global.gameData.players) {
+                            if (global.gameData.players[id].position == 1) {
+                                global.gameData.players[id].socket.emit('lose', {});
+                            }
+                            else {
+                                global.gameData.players[id].socket.emit('win', {});
+                            }
+                        }
                     }
                     socket.broadcast.emit('exit', {playerCount: global.gameData.player_count});
                 });
@@ -237,7 +260,7 @@ module.exports = function (io) {
                     global.gameData.players[data.playerId].die();
                     var left = [0, 0];
                     for(var id in global.gameData.players) {
-                        if (global.gameData.players[id].status != 'die') {
+                        if (global.gameData.players[id].status != 'die' && global.gameData.players[id].controlled) {
                             left[global.gameData.players[id].position]++;
                         }
                     }

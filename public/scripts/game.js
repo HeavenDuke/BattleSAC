@@ -7,6 +7,7 @@ var destroyed = [];
 var cases = [];
 var selfId = null;
 var self = null;
+var gameState = "waiting";
 var socket = io.connect(window.location.origin);
 var UiPlayers = document.getElementById("players");
 
@@ -360,6 +361,18 @@ require(objectFiles, function () {
                     stage.insert(temp.p.nameLabel);
                 }
             }
+            var countdown = 3;
+            function cnt () {
+                if (countdown == 0) {
+                    alert('游戏开始');
+                    gameState = "started";
+                }
+                else {
+                    countdown--;
+                    setTimeout(cnt, 1000);
+                }
+            }
+            cnt();
         });
     }
 

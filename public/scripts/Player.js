@@ -5,10 +5,12 @@
 var UiLocation = document.getElementById("location");
 
 var switchMenu = function (action, params) {
-    $("div[id$='_menu']").css("display", "none");
-    $("#" + action + "_menu").css("display", "block");
-    if (params) {
-        $("#" + action + "_menu").attr("params", JSON.stringify(params));
+    if (gameState == "started") {
+        $("div[id$='_menu']").css("display", "none");
+        $("#" + action + "_menu").css("display", "block");
+        if (params) {
+            $("#" + action + "_menu").attr("params", JSON.stringify(params));
+        }
     }
 };
 
