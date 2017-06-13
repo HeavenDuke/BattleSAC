@@ -71,9 +71,7 @@ module.exports = function (io) {
                 socket.on('openCase', function (data) {
                     var result = global.gameData.case[data.caseId].open(global.gameData.players[data.playerId].caseKeys);
                     if (result) {
-                        for (var id in global.gameData.players[data.playerId].authenticated) {
-                            global.gameData.players[id].socket.emit("caseOpened", {id: data.caseId});
-                        }
+                        socket.broadcast.emit("caseOpened", {id: data.caseId});
                         socket.emit("caseOpened", {id: data.caseId});
                     }
                     else {
@@ -84,12 +82,18 @@ module.exports = function (io) {
 
                 socket.on('arm', function (data) {
                     if (global.gameData.case[data.caseId].status == "open") {
-                        global.gameData.players[data.playerId].armed = true;
-                        socket.broadcast.emit("armed", {id: data.playerId});
-                        socket.emit("armed", {id: data.playerId});
+                        if (global.gameData.case[data.caseId].capacity > 0) {
+                            global.gameData.players[data.playerId].armed = true;
+                            global.gameData.case[data.caseId].capacity--;
+                            socket.broadcast.emit("armed", {id: data.playerId, caseId: data.caseId, capacity: global.gameData.case[data.caseId].capacity});
+                            socket.emit("armed", {id: data.playerId, caseId: data.caseId, capacity: global.gameData.case[data.caseId].capacity});
+                        }
+                        else {
+                            socket.emit("armed", {message: "箱子内已无剩余武器"});
+                        }
                     }
                     else {
-
+                        socket.emit("armed", {message: '箱子尚未开启'});
                     }
                 });
 
@@ -221,9 +225,44 @@ module.exports = function (io) {
                         message: secret
                     }));
                     commander.caseKeys = commander.caseKeys.concat(dec);
-                    commander.socket.emit("submission", {playerId: player.id, keys: player.caseKeys});
-                    // TODO：转交后是否仍然持有？
+                    commander.socket.emit("submission", {playerId: player.id, keys: dec});
                     player.socket.emit("submission", {message: "已转交补给箱钥匙"});
+                });
+
+                socket.on('fly', function (data) {
+                    socket.broadcast.emit('fly', data);
+                });
+
+                socket.on('hit', function (data) {
+                    global.gameData.players[data.playerId].die();
+                    var left = [0, 0];
+                    for(var id in global.gameData.players) {
+                        if (global.gameData.players[id].status != 'die') {
+                            left[global.gameData.players[id].position]++;
+                        }
+                    }
+                    if (left[0] == 0) {
+                        for(id in global.gameData.players) {
+                            if (global.gameData.players[id].position == 1) {
+                                global.gameData.players[id].socket.emit('win', {});
+                            }
+                            else {
+                                global.gameData.players[id].socket.emit('lose', {});
+                            }
+                        }
+                    }
+                    else if (left[1] == 0) {
+                        for(id in global.gameData.players) {
+                            if (global.gameData.players[id].position == 1) {
+                                global.gameData.players[id].socket.emit('lose', {});
+                            }
+                            else {
+                                global.gameData.players[id].socket.emit('win', {});
+                            }
+                        }
+                    }
+                    socket.broadcast.emit('die', data);
+                    socket.emit('die', data);
                 });
 
                 if (global.gameData.can_start()) {
@@ -231,7 +270,7 @@ module.exports = function (io) {
                         global.gameData.start();
                         var cases = {};
                         for (var key in global.gameData.case) {
-                            cases[key] = {id: key, location: global.gameData.case[key].initial_location};
+                            cases[key] = {id: key, location: global.gameData.case[key].initial_location, capacity: global.gameData.case[key].capacity};
                         }
                         socket.broadcast.emit('start', cases);
                         socket.emit('start', cases);

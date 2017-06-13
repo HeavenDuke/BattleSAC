@@ -23,6 +23,8 @@ require([], function () {
                 sheet: 'player'
             });
             this.p.update = false;
+            this.p.bullets = [];
+            this.p.bulletId = 0;
             this.p.nameLabel = new Q.UI.Text({
                 label: this.p.playerId + "(You)",
                 color: "gray",
@@ -69,6 +71,25 @@ require([], function () {
         updateLabel: function () {
             this.p.nameLabel.p.x = this.p.x;
             this.p.nameLabel.p.y = this.p.y - 30;
+        },
+        fire: function (actor) {
+            var dx = actor.p.x - this.p.x;
+            var dy = actor.p.y - this.p.y;
+            var v = 15, bias = 40;
+            var d = Math.sqrt(dx * dx + dy * dy);
+            var sina = dy / d, cosa = dx / d;
+            var vx = v * cosa, vy = v * sina;
+            var bullet = new Q.Bullet({
+                playerId: this.p.playerId,
+                bulletId: this.p.bulletId++,
+                x: this.p.x + bias * cosa,
+                y: this.p.y + bias * sina,
+                vex: vx,
+                vey: vy,
+                socket: this.p.socket
+            });
+            this.p.bullets.push(bullet);
+            this.p.stage.insert(bullet);
         }
     });
 
@@ -85,6 +106,7 @@ require([], function () {
                 y: this.p.y - 30,
                 size: 12
             });
+            this.p.bullets = [];
             this.p.nameVisible = false;
             setInterval(function () {
                 if (!temp.p.update) {
@@ -107,21 +129,39 @@ require([], function () {
             else if (this.p.isEnemy != true) {
                 switchMenu("unknown", {self: selfId, playerId: this.p.playerId});
             }
+            else if (self.p.armed) {
+                self.fire(this);
+            }
         },
         updateLabel: function () {
             this.p.nameLabel.p.x = this.p.x;
             this.p.nameLabel.p.y = this.p.y - 30;
+        },
+        fire: function (bulletInfo, stage) {
+            var bullet = new Q.Bullet({
+                playerId: this.p.playerId,
+                bulletId: bulletInfo['bulletId'],
+                x: bulletInfo['x'],
+                y: bulletInfo['y']
+            });
+            this.p.bullets.push(bullet);
+            stage.insert(bullet);
         }
     });
 
     Q.Sprite.extend('Case', {
         init: function (p) {
             this._super(p, {
-                update: true,
                 sheet: 'case',
                 opened: false
             });
-            this.p.update = false;
+            this.p.nameLabel = new Q.UI.Text({
+                label: "Locked",
+                color: "gray",
+                x: this.p.x,
+                y: this.p.y - 30,
+                size: 12
+            });
             this.on("touch");
         },
         touch: function (touch) {
@@ -135,6 +175,10 @@ require([], function () {
                 $("#open").css("display", "none");
                 $("#arm").css("display", "block");
             }
+        },
+        open: function () {
+            this.p.opened = true;
+            this.p.nameLabel.p.label = "Opened(Remain: " + this.p.capacity + ")";
         }
     });
 
@@ -144,18 +188,21 @@ require([], function () {
                 sheet: 'bullet'
             });
             this.add('2d, platformerControls, animation');
-            this.on("hit",this,"collision");
+            this.on("hit.sprite",  function (collision) {
+                if (this.p.socket) {
+                    if (collision.obj.isA('Actor')) {
+                        this.p.socket.emit('hit', {playerId: collision.obj.p.playerId, bulletId: this.p.bulletId, fireId: selfId});
+                    }
+                }
+                this.destroy();
+            });
         },
         step: function (dt) {
             if (this.p.socket) {
+                this.p.y += this.p.vey;
+                this.p.x += this.p.vex;
                 this.p.socket.emit('fly', {playerId: selfId, bulletId: this.p.bulletId, x: this.p.x, y: this.p.y});
             }
-        },
-        collision: function (col) {
-            if (col.obj.p.playerId) {
-                this.p.socket.emit('die', {playerId: col.obj.p.playerId});
-            }
-            this.destroy();
         }
     });
 

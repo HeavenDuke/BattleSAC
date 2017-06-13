@@ -5,6 +5,12 @@
     "tilew": 30,
     "tileh": 30
   },
+  "armedplayer": {
+    "sx": 120,
+    "sy": 0,
+    "tilew": 30,
+    "tileh": 30
+  },
   "friend": {
     "sx": 30,
     "sy": 0,
@@ -41,15 +47,21 @@
     "tilew": 30,
     "tileh": 24
   },
-  "case": {
+  "bullet": {
     "sx": 0,
     "sy": 54,
+    "tilew": 2,
+    "tileh": 2
+  },
+  "case": {
+    "sx": 120,
+    "sy": 30,
     "tilew": 30,
     "tileh": 30
   },
   "openedcase": {
-    "sx": 30,
-    "sy": 54,
+    "sx": 90,
+    "sy": 30,
     "tilew": 30,
     "tileh": 30
   }

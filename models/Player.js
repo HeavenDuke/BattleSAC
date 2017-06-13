@@ -8,7 +8,7 @@ var authentication = require('../libs').authentication;
 var Player = function (id, title, position, key, caseKey, code) {
     this.id = id;
     this.code = code;
-    this.initial_location = [random.rand_int(100, 200), random.rand_int(100, 200)];
+    this.initial_location = [random.rand_int(100, 500), random.rand_int(100, 500)];
     this.title = title;
     this.position = position;
     this.controlled = false;
@@ -41,6 +41,10 @@ Player.prototype.positionInfo = function () {
         authenticated: authenticated,
         unauthenticated: Object.keys(this.unauthenticated)
     };
+};
+
+Player.prototype.die = function () {
+    this.status = "die";
 };
 
 module.exports = Player;

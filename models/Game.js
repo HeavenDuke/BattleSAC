@@ -15,7 +15,7 @@ var md5 = function (text) {
 };
 
 var Game = function () {
-    this.max_player_count = 6;
+    this.max_player_count = 4;
     this.player_count = 0;
     this.players = {};
     this.case = {};
@@ -35,12 +35,6 @@ var Game = function () {
     for(var i = 0; i < this.max_player_count; i++) {
         this.players[i] = new Player(i, titles[position][Math.floor(i / 2)], position, authentication.generateKey(), this.case[caseIds[position]].distribute_key(), md5(position + "" + randStr));
         position = 1 - position;
-    }
-    for(var i = 0; i < this.max_player_count; i++) {
-        this.compareMat[i] = [];
-        for(var j = 0; j < this.max_player_count; j++) {
-            this.compareMat[i][j] = (-2 * (i != j));
-        }
     }
     for(i = 0; i < this.max_player_count; i++) {
         for(var j = 0; j < this.max_player_count; j++) {

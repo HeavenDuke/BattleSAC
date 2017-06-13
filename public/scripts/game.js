@@ -3,6 +3,7 @@
  */
 
 var players = [];
+var destroyed = [];
 var cases = [];
 var selfId = null;
 var self = null;
@@ -71,7 +72,7 @@ require(objectFiles, function () {
 
         socket.on('connected', function (data) {
             selfId = data['id'];
-            var player = new Q.Player({ playerId: selfId, x: data.initial_location[0], y: data.initial_location[1], socket: socket });
+            var player = new Q.Player({ playerId: selfId, x: data.initial_location[0], y: data.initial_location[1], socket: socket, stage: stage });
             self = player;
             player.p.sheet = 'commander';
             stage.insert(player);
@@ -170,43 +171,53 @@ require(objectFiles, function () {
                     return obj.caseId == data['id'];
                 })[0];
                 if (_case) {
-                    _case.case.p.opened = true;
-                    _case.case.p.sheet = "openedcase";
-                    _case.case.p.update = true;
+                    _case.case.open(stage);
                 }
             });
 
             socket.on('armed', function (data) {
-                if (data['id'] == selfId) {
-                    self.p.armed = true;
-                    if (self.p.isCommander) {
-                        self.p.sheet = "armedcommander";
-                    }
-                    else {
-                        self.p.sheet = "armedfriend";
-                    }
+                if (data['message']) {
+                    alert(data['message']);
                 }
                 else {
-                    var actor = players.filter(function (obj) {
-                        return obj.playerId == data['id'];
-                    })[0];
-                    if (actor) {
-                        actor.player.p.armed = true;
-                        if (actor.player.p.isEnemy) {
-                            actor.player.p.sheet = "armedenemy";
-                        }
-                        else if (actor.player.p.isEnemy == false) {
-                            if (actor.player.p.isCommander) {
-                                actor.player.p.sheet = "armedcommander";
-                            }
-                            else {
-                                actor.player.p.sheet = "armedfriend";
-                            }
+                    if (data['id'] == selfId) {
+                        self.p.armed = true;
+                        if (self.p.isCommander) {
+                            self.p.sheet = "armedcommander";
                         }
                         else {
-                            actor.player.p.sheet = "armedplayer";
+                            self.p.sheet = "armedfriend";
                         }
-                        actor.player.p.update = true;
+                    }
+                    else {
+                        var actor = players.filter(function (obj) {
+                            return obj.playerId == data['id'];
+                        })[0];
+                        if (actor) {
+                            actor.player.p.armed = true;
+                            if (actor.player.p.isEnemy) {
+                                actor.player.p.sheet = "armedenemy";
+                            }
+                            else if (actor.player.p.isEnemy == false) {
+                                if (actor.player.p.isCommander) {
+                                    actor.player.p.sheet = "armedcommander";
+                                }
+                                else {
+                                    actor.player.p.sheet = "armedfriend";
+                                }
+                            }
+                            else {
+                                actor.player.p.sheet = "armedplayer";
+                            }
+                            actor.player.p.update = true;
+                        }
+                    }
+                    var _case = cases.filter(function (obj) {
+                        return obj.caseId == data['caseId'];
+                    })[0];
+                    if (_case) {
+                        _case.case.p.capacity = data['capacity'];
+                        _case.case.p.nameLabel.p.label = "Opened(Remain: " + _case.case.p.capacity + ")";
                     }
                 }
             });
@@ -222,9 +233,17 @@ require(objectFiles, function () {
                     actor.player.p.update = true;
                     actor.player.updateLabel();
                 } else {
-                    var temp = new Q.Actor({ playerId: data['id'], x: data['x'], y: data['y'], sheet: "player" });
-                    players.push({ player: temp, playerId: data['id'] });
-                    stage.insert(temp);
+                    var ded = false;
+                    destroyed.forEach(function (id) {
+                        if (data['id'] == id) {
+                            ded = true;
+                        }
+                    });
+                    if (!ded) {
+                        var temp = new Q.Actor({playerId: data['id'], x: data['x'], y: data['y'], sheet: "player"});
+                        players.push({player: temp, playerId: data['id']});
+                        stage.insert(temp);
+                    }
                 }
             });
 
@@ -263,13 +282,66 @@ require(objectFiles, function () {
                 }
             });
 
-            socket.on('fire', function (data) {
-
+            socket.on('fly', function (data) {
+                var actor = players.filter(function (obj) {
+                    return obj.playerId == data['playerId'];
+                })[0];
+                if (actor) {
+                    var bullet = actor.player.p.bullets.filter(function (obj) {
+                        return obj.p.bulletId == data['bulletId'];
+                    })[0];
+                    if (bullet) {
+                        bullet.p.x = data['x'];
+                        bullet.p.y = data['y'];
+                    }
+                    else {
+                        actor.player.fire(data, stage);
+                    }
+                }
             });
 
             socket.on('die', function (data) {
-
+                var actor = players.filter(function (obj) {
+                    return obj.playerId == data.fireId;
+                })[0];
+                if (actor) {
+                    for(var i = 0; i < actor.player.p.bullets.length; i++) {
+                        if (actor.player.p.bullets[i].p.bulletId == data.bulletId) {
+                            actor.player.p.bullets[i].destroy();
+                            actor.player.p.bullets.splice(i, 1);
+                        }
+                    }
+                }
+                if (data.playerId == selfId) {
+                    self.p.nameLabel.destroy();
+                    self.destroy();
+                    alert('you are busted!');
+                }
+                else {
+                    actor = players.filter(function (obj) {
+                        return obj.playerId == data.playerId;
+                    })[0];
+                    if (actor) {
+                        actor.player.destroy();
+                        destroyed.push(actor.playerId);
+                        for(i = 0; i < players.length; i++) {
+                            if (players[i].playerId == data['playerId']) {
+                                players.splice(i, 1);
+                                break;
+                            }
+                        }
+                    }
+                }
             });
+
+            socket.on('win', function () {
+                alert("your team wins!");
+            });
+
+            socket.on('lose', function () {
+                alert("your team lost!");
+            });
+
         });
 
         socket.on('crowded', function (data) {
@@ -278,9 +350,15 @@ require(objectFiles, function () {
 
         socket.on('start', function (data) {
             for(var key in data) {
-                var temp = new Q.Case({ caseId: data[key]['id'], x: data[key].location[0], y: data[key].location[1], sheet: 'case'});
-                cases.push({case: temp, caseId: key});
-                stage.insert(temp);
+                var _case = cases.filter(function (obj) {
+                    return obj.caseId == key;
+                })[0];
+                if (!_case) {
+                    var temp = new Q.Case({ caseId: data[key]['id'], x: data[key].location[0], y: data[key].location[1], sheet: 'case', capacity: data[key].capacity});
+                    cases.push({case: temp, caseId: key});
+                    stage.insert(temp);
+                    stage.insert(temp.p.nameLabel);
+                }
             }
         });
     }
