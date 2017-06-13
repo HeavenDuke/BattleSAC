@@ -50,8 +50,8 @@
   "bullet": {
     "sx": 0,
     "sy": 54,
-    "tilew": 2,
-    "tileh": 2
+    "tilew": 4,
+    "tileh": 4
   },
   "case": {
     "sx": 120,

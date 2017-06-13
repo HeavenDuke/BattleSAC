@@ -2,7 +2,6 @@
  * Created by heavenduke on 17-5-30.
  */
 
-var UiLocation = document.getElementById("location");
 
 var switchMenu = function (action, params) {
     if (gameState == "started") {
@@ -13,8 +12,6 @@ var switchMenu = function (action, params) {
         }
     }
 };
-
-
 
 require([], function () {
     Q.Sprite.extend('Player', {
@@ -46,13 +43,13 @@ require([], function () {
                 this.p.vx = 200;
             } else if (Q.inputs['left']) {
                 this.p.vx = -200;
-            } else {
-                if (!Q.inputs['down'] && !Q.inputs['up']) {
-                    this.p.vy = 0;
-                }
-                if (!Q.inputs['left'] && !Q.inputs['right']) {
-                    this.p.vx = 0;
-                }
+            }
+
+            if (!Q.inputs['down'] && !Q.inputs['up']) {
+                this.p.vy = 0;
+            }
+            if (!Q.inputs['left'] && !Q.inputs['right']) {
+                this.p.vx = 0;
             }
 
             if (Q.inputs['up'] || Q.inputs['down'] || Q.inputs['left'] || Q.inputs['right']) {
@@ -62,7 +59,7 @@ require([], function () {
             this.updateLabel();
 
             this.p.socket.emit('update', { id: this.p.playerId, x: this.p.x, y: this.p.y, sheet: this.p.sheet });
-            UiLocation.innerHTML = "Location: (" + this.p.x + ", " + this.p.y + ")";
+            infoDisplayers.location.updateInfo([this.p.x.toFixed(2), this.p.y.toFixed(2)]);
         },
         exchange: function (playerId, isEnemy, isCommander) {
             this.p.socket.emit('exchange', {playerId: playerId, isEnemy: isEnemy, isCommander: isCommander});

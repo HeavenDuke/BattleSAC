@@ -7,16 +7,41 @@ var destroyed = [];
 var cases = [];
 var selfId = null;
 var self = null;
+var uiStage = null;
 var gameState = "waiting";
+var infoDisplayers = {
+    location: {
+        displayer: $("#location"),
+        updateInfo: function (location) {
+            $("#location").text("坐标: (" + location[0] + ", " + location[1] + ")");
+        }
+    },
+    code: {
+        displayer: $("#code"),
+        updateInfo: function (code) {
+            $("#code").text("暗号: " + code);
+        }
+    }
+};
 var socket = io.connect(window.location.origin);
-var UiPlayers = document.getElementById("players");
 
-var Q = Quintus({audioSupported: [ 'wav','mp3' ]})
+var Q = Quintus({audioSupported: ['wav', 'mp3']})
     .include('Sprites, Scenes, Input, 2D, Anim, Touch, UI, Audio')
-    .setup("game", { maximize: true })
+    .setup("game", {maximize: true})
     .enableSound()
     .controls();
 Q.touch(Q.SPRITE_ALL);
+
+function eventLog(message, log) {
+    if (log) {
+        log = new Date() + ": " + log + "\n";
+    }
+    else {
+        log = new Date() + ": " + message + "\n";
+    }
+    $("#eventlog").text(message);
+    $("#log").val($("#log").val() + log);
+}
 
 $("#unknown_menu").children().click(function () {
     socket.emit("authentication", JSON.parse($(this).parent().attr('params')));
@@ -56,13 +81,18 @@ var objectFiles = [
 
 require(objectFiles, function () {
 
-    function setUp (stage) {
+    function setUp(stage) {
+
         socket.on('join', function (data) {
-            UiPlayers.innerHTML = 'Players: ' + data['playerCount'];
+            if (gameState != "started") {
+                eventLog("已加入" + data['playerCount'] + "人，还差" + data['total'] + "人");
+            }
         });
 
         socket.on('exit', function (data) {
-            UiPlayers.innerHTML = 'Players: ' + data['playerCount'];
+            if (gameState != "started") {
+                eventLog("已加入" + data['playerCount'] + "人，还差" + data['total'] + "人");
+            }
             var actor = players.filter(function (obj) {
                 return obj.playerId == data['id'];
             })[0];
@@ -73,12 +103,21 @@ require(objectFiles, function () {
 
         socket.on('connected', function (data) {
             selfId = data['id'];
-            var player = new Q.Player({ playerId: selfId, x: data.initial_location[0], y: data.initial_location[1], socket: socket, stage: stage });
+            var player = new Q.Player({
+                playerId: selfId,
+                x: data.initial_location[0],
+                y: data.initial_location[1],
+                socket: socket,
+                stage: stage
+            });uiStage = stage;
             self = player;
             player.p.sheet = 'commander';
             stage.insert(player);
             stage.insert(player.p.nameLabel);
             stage.add('viewport').follow(player);
+
+            infoDisplayers.location.updateInfo(data.initial_location);
+            infoDisplayers.code.updateInfo(data.code);
 
             socket.on('authentication', function (data) {
                 var actor = players.filter(function (obj) {
@@ -95,17 +134,18 @@ require(objectFiles, function () {
                         }
                         actor.player.p.isCommander = data.isCommander;
                         player.exchange(actor.playerId, false, actor.player.p.isCommander);
+                        eventLog("成功与" + data['playerId'] + "号伞兵进行认证，资讯已与友军同步");
                     }
                     else if (data.valid == false) {
                         actor.player.p.isEnemy = true;
                         actor.player.p.sheet = actor.player.p.armed ? "armedenemy" : "enemy";
                         player.exchange(actor.playerId, true);
+                        eventLog("发现敌方单位，资讯已与友军同步");
                     }
                 }
             });
 
             socket.on('exchange', function (data) {
-                console.log(data);
                 if (data.type == "update") {
                     var actor = players.filter(function (obj) {
                         return obj.playerId == data.data['playerId'];
@@ -124,15 +164,17 @@ require(objectFiles, function () {
                                 stage.insert(actor.player.p.nameLabel);
                                 actor.player.p.nameVisible = true;
                             }
+                            eventLog(actor.playerId + "号伞兵入队！");
                         }
                         else if (data.data.isEnemy == true) {
                             actor.player.p.isEnemy = true;
                             actor.player.p.sheet = actor.player.p.armed ? "armedenemy" : "enemy";
+                            eventLog("发现敌人，资讯已同步");
                         }
                     }
                 }
                 else if (data.type == 'sync') {
-                    for(var i = 0; i < data.data.authenticated.length; i++) {
+                    for (var i = 0; i < data.data.authenticated.length; i++) {
                         actor = players.filter(function (obj) {
                             return obj.playerId == data.data.authenticated[i]['playerId'];
                         })[0];
@@ -151,7 +193,7 @@ require(objectFiles, function () {
                             }
                         }
                     }
-                    for(i = 0; i < data.data.unauthenticated.length; i++) {
+                    for (i = 0; i < data.data.unauthenticated.length; i++) {
                         actor = players.filter(function (obj) {
                             return obj.playerId == data.data.unauthenticated[i];
                         })[0];
@@ -164,7 +206,7 @@ require(objectFiles, function () {
             });
 
             socket.on('caseNotOpened', function (data) {
-                alert("failed to open supplement case.");
+                eventLog("开启补给箱失败");
             });
 
             socket.on('caseOpened', function (data) {
@@ -174,11 +216,12 @@ require(objectFiles, function () {
                 if (_case) {
                     _case.case.open(stage);
                 }
+                eventLog("有新开启的补给箱！");
             });
 
             socket.on('armed', function (data) {
                 if (data['message']) {
-                    alert(data['message']);
+                    eventLog(data['message']);
                 }
                 else {
                     if (data['id'] == selfId) {
@@ -249,22 +292,24 @@ require(objectFiles, function () {
             });
 
             socket.on('submission', function (data) {
-                if(data.message) {
-                    alert(data.message);
+                if (data.message) {
+                    eventLog(data.message);
                 }
                 else {
-                    var message = data.playerId + "号伞兵向你转交了补给箱钥匙，钥匙分别为：";
-                    for(var i = 0; i < data.keys.length; i++) {
+                    var message = data.playerId + "号伞兵向你转交了补给箱钥匙";
+                    for (var i = 0; i < data.keys.length; i++) {
                         message += "\n(" + data.keys[i].x + ", " + data.keys[i].fx + ")";
                     }
-                    alert(message);
+                    eventLog(data.playerId + "号伞兵向你转交了补给箱钥匙", message);
                 }
             });
 
             socket.on('comparison', function (data) {
-                console.log(data);
-                if(data.message) {
-                    alert(data.message);
+                if (data.message) {
+                    eventLog(data.message);
+                }
+                else if (data.id) {
+                    eventLog(data.id[0] + "号伞兵与" + data.id[1] + "号伞兵进行了军衔比较，二人军衔相同");
                 }
                 else {
                     if (data.playerId == selfId) {
@@ -279,6 +324,15 @@ require(objectFiles, function () {
                             actor.player.p.isCommander = false;
                             actor.player.p.sheet = actor.player.p.armed ? "armedfriend" : "friend";
                         }
+                    }
+                    if (data.playerId == selfId) {
+                        eventLog("您与" + data.playerId + "号伞兵进行了军衔比较，" + data.playerId + "的军衔更高");
+                    }
+                    else if (data.winnerId == selfId) {
+                        eventLog("您与" + data.playerId + "号伞兵进行了军衔比较，您的军衔更高");
+                    }
+                    else {
+                        eventLog(data.playerId + "号伞兵与" + data.winnerId + "号伞兵进行了军衔比较，" + data.winnerId + "号伞兵的军衔更高");
                     }
                 }
             });
@@ -306,7 +360,7 @@ require(objectFiles, function () {
                     return obj.playerId == data.fireId;
                 })[0];
                 if (actor) {
-                    for(var i = 0; i < actor.player.p.bullets.length; i++) {
+                    for (var i = 0; i < actor.player.p.bullets.length; i++) {
                         if (actor.player.p.bullets[i].p.bulletId == data.bulletId) {
                             actor.player.p.bullets[i].destroy();
                             actor.player.p.bullets.splice(i, 1);
@@ -316,7 +370,7 @@ require(objectFiles, function () {
                 if (data.playerId == selfId) {
                     self.p.nameLabel.destroy();
                     self.destroy();
-                    alert('you are busted!');
+                    eventLog('you are busted!');
                 }
                 else {
                     actor = players.filter(function (obj) {
@@ -325,7 +379,7 @@ require(objectFiles, function () {
                     if (actor) {
                         actor.player.destroy();
                         destroyed.push(actor.playerId);
-                        for(i = 0; i < players.length; i++) {
+                        for (i = 0; i < players.length; i++) {
                             if (players[i].playerId == data['playerId']) {
                                 players.splice(i, 1);
                                 break;
@@ -336,11 +390,11 @@ require(objectFiles, function () {
             });
 
             socket.on('win', function () {
-                alert("your team wins!");
+                eventLog("your team wins!");
             });
 
             socket.on('lose', function () {
-                alert("your team lost!");
+                eventLog("your team lost!");
             });
 
         });
@@ -350,36 +404,49 @@ require(objectFiles, function () {
         });
 
         socket.on('start', function (data) {
-            for(var key in data) {
+            for (var key in data) {
                 var _case = cases.filter(function (obj) {
                     return obj.caseId == key;
                 })[0];
                 if (!_case) {
-                    var temp = new Q.Case({ caseId: data[key]['id'], x: data[key].location[0], y: data[key].location[1], sheet: 'case', capacity: data[key].capacity});
+                    var temp = new Q.Case({
+                        caseId: data[key]['id'],
+                        x: data[key].location[0],
+                        y: data[key].location[1],
+                        sheet: 'case',
+                        capacity: data[key].capacity
+                    });
                     cases.push({case: temp, caseId: key});
                     stage.insert(temp);
                     stage.insert(temp.p.nameLabel);
                 }
             }
             var countdown = 3;
-            function cnt () {
+
+            function cnt() {
                 if (countdown == 0) {
-                    alert('游戏开始');
+                    eventLog("游戏开始！");
                     gameState = "started";
                 }
                 else {
+                    eventLog("倒计时：" + countdown);
                     countdown--;
                     setTimeout(cnt, 1000);
                 }
             }
+
             cnt();
         });
     }
 
     Q.scene('arena', function (stage) {
-        stage.collisionLayer(new Q.TileLayer({ dataAsset: '/maps/arena.json', sheet: 'tiles' }));
+        stage.collisionLayer(new Q.TileLayer({dataAsset: '/maps/arena.json', sheet: 'tiles'}));
 
         setUp(stage);
+    });
+
+
+    Q.scene('information', function (stage) {
 
     });
 
@@ -391,8 +458,9 @@ require(objectFiles, function () {
     ];
 
     Q.load(files.join(','), function () {
-        Q.sheet('tiles', '/images/tiles.png', { tilew: 32, tileh: 32 });
+        Q.sheet('tiles', '/images/tiles.png', {tilew: 32, tileh: 32});
         Q.compileSheets('/images/sprites.png', '/images/sprites.json');
         Q.stageScene('arena', 0);
+        Q.stageScene('information', 2);
     });
 });

@@ -25,7 +25,8 @@ var Player = function (id, title, position, key, caseKey, code) {
 Player.prototype.basicInfo = function () {
     return {
         id: this.id,
-        initial_location: this.initial_location
+        initial_location: this.initial_location,
+        code: this.code
     };
 };
 

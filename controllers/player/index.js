@@ -12,40 +12,44 @@ module.exports = function (io) {
             global.gameData.player_count++;
             global.gameData.players[player.id].socket = socket;
             setTimeout(function () {
-                socket.broadcast.emit('join', {playerCount: global.gameData.player_count});
-                socket.emit('join', {playerCount: global.gameData.player_count});
+                socket.broadcast.emit('join', {playerCount: global.gameData.player_count, total: global.gameData.max_player_count});
+                socket.emit('join', {playerCount: global.gameData.player_count, total: global.gameData.max_player_count});
                 socket.emit('connected', player.basicInfo());
 
                 socket.on('disconnect', function () {
                     global.gameData.player_count--;
                     global.gameData.players[player.id].controlled = false;
-                    var left = [0, 0];
-                    for(var id in global.gameData.players) {
-                        if (global.gameData.players[id].status != 'die' && global.gameData.players[id].controlled) {
-                            left[global.gameData.players[id].position]++;
-                        }
-                    }
-                    if (left[0] == 0) {
-                        for(id in global.gameData.players) {
-                            if (global.gameData.players[id].position == 1) {
-                                global.gameData.players[id].socket.emit('win', {});
-                            }
-                            else {
-                                global.gameData.players[id].socket.emit('lose', {});
+
+                    if (global.gameData.started) {
+
+                        var left = [0, 0];
+                        for (var id in global.gameData.players) {
+                            if (global.gameData.players[id].status != 'die' && global.gameData.players[id].controlled) {
+                                left[global.gameData.players[id].position]++;
                             }
                         }
-                    }
-                    else if (left[1] == 0) {
-                        for(id in global.gameData.players) {
-                            if (global.gameData.players[id].position == 1) {
-                                global.gameData.players[id].socket.emit('lose', {});
+                        if (left[0] == 0) {
+                            for (id in global.gameData.players) {
+                                if (global.gameData.players[id].position == 1) {
+                                    global.gameData.players[id].socket && global.gameData.players[id].socket.emit('win', {});
+                                }
+                                else {
+                                    global.gameData.players[id].socket && global.gameData.players[id].socket.emit('lose', {});
+                                }
                             }
-                            else {
-                                global.gameData.players[id].socket.emit('win', {});
+                        }
+                        else if (left[1] == 0) {
+                            for (id in global.gameData.players) {
+                                if (global.gameData.players[id].position == 1) {
+                                    global.gameData.players[id].socket && global.gameData.players[id].socket.emit('lose', {});
+                                }
+                                else {
+                                    global.gameData.players[id].socket && global.gameData.players[id].socket.emit('win', {});
+                                }
                             }
                         }
                     }
-                    socket.broadcast.emit('exit', {playerCount: global.gameData.player_count});
+                    socket.broadcast.emit('exit', {playerCount: global.gameData.player_count, total: global.gameData.max_player_count});
                 });
 
                 socket.on('update', function (data) {
@@ -74,7 +78,7 @@ module.exports = function (io) {
                                     player1.authenticated[id] = global.gameData.players[id];
                                     player2.authenticated_me[player1.id] = player1;
                                 }
-                                socket.emit('authentication', {
+                                player1.socket.emit('authentication', {
                                     playerId: player2.id,
                                     valid: valid,
                                     isCommander: player2.parent == player2.id
@@ -221,16 +225,22 @@ module.exports = function (io) {
                         });
                         switch (result) {
                             case 0:
-                                player.authenticated[data.playerId].socket.emit('comparison', {message: '双方军衔相同'});
+                                for(var id in player.authenticated) {
+                                    if (id in player.authenticated_me) {
+                                        player.authenticated[id].socket.emit('comparison', {id: [data.playerId, player.id]});
+                                    }
+                                }
+                                player.authenticated[data.playerId].socket.emit('comparison', {id: [data.playerId, player.id]});
                                 break;
                             default:
                                 var loserId = result == -1 ? player.id : data.playerId;
+                                var winnerId = result == -1 ? data.playerId : player.id;
                                 for(var id in player.authenticated) {
                                     if (id in player.authenticated_me) {
-                                        player.authenticated[id].socket.emit('comparison', {playerId: loserId});
+                                        player.authenticated[id].socket.emit('comparison', {playerId: loserId, winnerId: winnerId});
                                     }
                                 }
-                                player.socket.emit('comparison', {playerId: loserId});
+                                player.socket.emit('comparison', {playerId: loserId, winnerId: winnerId});
                                 break;
                         }
                     }
@@ -267,20 +277,20 @@ module.exports = function (io) {
                     if (left[0] == 0) {
                         for(id in global.gameData.players) {
                             if (global.gameData.players[id].position == 1) {
-                                global.gameData.players[id].socket.emit('win', {});
+                                global.gameData.players[id].socket && global.gameData.players[id].socket.emit('win', {});
                             }
                             else {
-                                global.gameData.players[id].socket.emit('lose', {});
+                                global.gameData.players[id].socket && global.gameData.players[id].socket.emit('lose', {});
                             }
                         }
                     }
                     else if (left[1] == 0) {
                         for(id in global.gameData.players) {
                             if (global.gameData.players[id].position == 1) {
-                                global.gameData.players[id].socket.emit('lose', {});
+                                global.gameData.players[id].socket && global.gameData.players[id].socket.emit('lose', {});
                             }
                             else {
-                                global.gameData.players[id].socket.emit('win', {});
+                                global.gameData.players[id].socket && global.gameData.players[id].socket.emit('win', {});
                             }
                         }
                     }
