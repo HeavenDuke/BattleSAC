@@ -16,6 +16,7 @@ var Player = function (id, title, position, key, caseKey, code) {
     this.caseKeys = [caseKey];
     this.authenticated = {};
     this.authenticated_me = {};
+    this.le_me = [];
     this.compared_times = 0;
     this.parent = id;
     this.unauthenticated = {};
@@ -46,6 +47,10 @@ Player.prototype.positionInfo = function () {
 
 Player.prototype.die = function () {
     this.status = "die";
+};
+
+Player.prototype.vote = function (votedId, code) {
+    this.voting = {votedId: votedId, code: code};
 };
 
 module.exports = Player;

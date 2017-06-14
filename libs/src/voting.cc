@@ -7,82 +7,16 @@
 #include "osrng.h"
 #include "nbtheory.h"
 
+#include "encryption.h"
 
+#include "Voter.h"
+#include "Voter.cpp"
 
 using namespace CryptoPP;
 
 using namespace Nan;
 
 using namespace std;
-
-inline CryptoPP::Integer Str2BigInt(std::string str) {
-	return CryptoPP::Integer(str.c_str());
-}
-inline std::string BigInt2Str(CryptoPP::Integer bigint) {
-	std::stringstream ss;
-	std::string str;
-
-	ss << bigint;
-	ss >> str;
-	return str;
-}
-
-class PublicKeyString {
-    public:
-        std::string Modulus_n;
-        std::string PublicExponent_e;
-    public:
-        PublicKeyString() {}
-        PublicKeyString(RSA::PublicKey key) {
-            Modulus_n = BigInt2Str(key.GetModulus());
-            PublicExponent_e = BigInt2Str(key.GetPublicExponent());
-        }
-        RSA::PublicKey toRSA_PublicKey() {
-            RSA::PublicKey key;
-            key.Initialize(
-                Str2BigInt(Modulus_n),
-                Str2BigInt(PublicExponent_e)
-            );
-            return key;
-        }
-        inline friend std::ostream& operator<<(std::ostream& out, PublicKeyString&	_this) {
-            out << "PublicKeyString: " << std::endl;
-            out << "\tn:" << _this.Modulus_n << std::endl;
-            out << "\te:" << _this.PublicExponent_e << std::endl;
-            return out;
-        }
-};
-
-
-class PrivateKeyString {
-    public:
-        std::string Modulus_n;
-        std::string PublicExponent_e;
-        std::string PrivateExponent_d;
-    public:
-        PrivateKeyString() {}
-        PrivateKeyString(RSA::PrivateKey key) {
-            Modulus_n = BigInt2Str(key.GetModulus());
-            PublicExponent_e = BigInt2Str(key.GetPublicExponent());
-            PrivateExponent_d = BigInt2Str(key.GetPrivateExponent());
-        }
-        RSA::PrivateKey toRSA_PrivateKey() {
-            RSA::PrivateKey key;
-            key.Initialize(
-                Str2BigInt(Modulus_n),
-                Str2BigInt(PublicExponent_e),
-                Str2BigInt(PrivateExponent_d)
-            );
-            return key;
-        }
-        inline friend std::ostream& operator<<(std::ostream& out, PrivateKeyString&	_this) {
-            out << "PrivateKeyString: " << std::endl;
-            out << "\tn:" << _this.Modulus_n << std::endl;
-            out << "\te:" << _this.PublicExponent_e << std::endl;
-            out << "\td:" << _this.PrivateExponent_d << std::endl;
-            return out;
-        }
-};
 
 class Soldier
 {
@@ -258,8 +192,68 @@ void CompareTitle(const FunctionCallbackInfo<v8::Value> &args) {
     args.GetReturnValue().Set(valid);
 }
 
+void AnonymousVoting(const FunctionCallbackInfo<v8::Value> &args) {
+    std::map<int, std::pair<int, int>> votes;
+    std::map<int, std::pair<PublicKeyString, PrivateKeyString>> keyPairs;
+    v8::Local<v8::Array> election = v8::Local<v8::Array>::Cast(args[0]);
+
+    for(int i = 0; i < election->Length(); i++) {
+        v8::Local<v8::Object> vote = election->Get(i)->ToObject();
+        int voterId = vote->Get(Nan::New("voterId").ToLocalChecked())->NumberValue();
+        int code = vote->Get(Nan::New("code").ToLocalChecked())->NumberValue();
+        int votedId = vote->Get(Nan::New("votedId").ToLocalChecked())->NumberValue();
+        votes[voterId] = std::pair<int, int>(code, votedId);
+
+        PublicKeyString pubStr = PublicKeyString();
+        PrivateKeyString priStr = PrivateKeyString();
+
+        v8::Local<v8::Object> pubObj = vote->Get(Nan::New("public").ToLocalChecked())->ToObject();
+        v8::Local<v8::String> text = pubObj->Get(Nan::New("n").ToLocalChecked())->ToString();
+        std::string t = std::string(*(v8::String::Utf8Value(text)));
+        pubStr.Modulus_n = t;
+        text = pubObj->Get(Nan::New("e").ToLocalChecked())->ToString();
+        t = std::string(*(v8::String::Utf8Value(text)));
+        pubStr.PublicExponent_e = t;
+
+        v8::Local<v8::Object> priObj = vote->Get(Nan::New("private").ToLocalChecked())->ToObject();
+        text = priObj->Get(Nan::New("n").ToLocalChecked())->ToString();
+        t = std::string(*(v8::String::Utf8Value(text)));
+        priStr.Modulus_n = t;
+        text = priObj->Get(Nan::New("e").ToLocalChecked())->ToString();
+        t = std::string(*(v8::String::Utf8Value(text)));
+        priStr.PublicExponent_e = t;
+        text = priObj->Get(Nan::New("d").ToLocalChecked())->ToString();
+        t = std::string(*(v8::String::Utf8Value(text)));
+        priStr.PrivateExponent_d = t;
+
+        keyPairs[voterId] = std::pair<PublicKeyString, PrivateKeyString>(pubStr, priStr);
+    }
+
+    std::map<int, std::vector<std::pair<int,int>> > _notification = GetVote(votes, keyPairs);
+    v8::Local<v8::Object> notification = Nan::New<v8::Object>();
+    std::map<int, std::vector<std::pair<int,int>> >::iterator it;
+
+    it = _notification.begin();
+
+    while(it != _notification.end()) {
+        v8::Local<v8::Array> result = Nan::New<v8::Array>();
+        std::vector<std::pair<int,int>> _result = it->second;
+        for(int i = 0; i < _result.size(); i++) {
+            v8::Local<v8::Object> _vote = Nan::New<v8::Object>();
+            _vote->Set(Nan::New("code").ToLocalChecked(), Nan::New(_result[i].first));
+            _vote->Set(Nan::New("votedId").ToLocalChecked(), Nan::New(_result[i].second));
+            result->Set(i, _vote);
+        }
+        notification->Set(Nan::New(it->first)->ToString(), result);
+        it++;
+    }
+
+    args.GetReturnValue().Set(notification);
+}
+
 void init(v8::Local<v8::Object> exports) {
     exports->Set(Nan::New("compareTitle").ToLocalChecked(), Nan::New<v8::FunctionTemplate>(CompareTitle)->GetFunction());
+    exports->Set(Nan::New("anonymousVoting").ToLocalChecked(), Nan::New<v8::FunctionTemplate>(AnonymousVoting)->GetFunction());
 }
 
 NODE_MODULE(supplement, init)

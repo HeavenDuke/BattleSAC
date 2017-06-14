@@ -20,7 +20,7 @@ var Game = function () {
     this.players = {};
     this.case = {};
     this.started = false;
-    var titles = [[1, 2, 3], [1, 2, 3]];
+    var titles = [[1, 1, 1], [1, 1, 1]];
     var position = 0;
     var rand1 = random.rand_int(0, 100);
     var rand2 = random.rand_int(0, 100);
@@ -29,7 +29,6 @@ var Game = function () {
     }
     this.case[rand1] = new Case(this.max_player_count / 2);
     this.case[rand2] = new Case(this.max_player_count / 2);
-    this.compareMat = [];
     var caseIds = [rand1, rand2];
     var randStr = Date.now();
     for(var i = 0; i < this.max_player_count; i++) {

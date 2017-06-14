@@ -9,6 +9,9 @@
 #include <cstdlib>
 #include <hex.h>
 #include <vector>
+#include <map>
+
+#include "encryption.h"
 
 using CryptoPP::AutoSeededRandomPool;
 using CryptoPP::InvertibleRSAFunction;
@@ -53,6 +56,6 @@ public:
 	std::vector<std::string> m_votes;
 };
 
-std::vector< std::pair<int,int> > GetVote(const std::vector< std::pair<int,int> > &votes, const std::vector< std::pair<PublicKeyString, PrivateKeyString> > &voterskey);
+std::map<int, std::vector<std::pair<int,int>> > GetVote(const std::map< int, std::pair<int,int> > &votes, const std::map<int, std::pair<PublicKeyString, PrivateKeyString> > &voterskey);
 
 #endif

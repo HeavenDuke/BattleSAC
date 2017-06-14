@@ -4,7 +4,7 @@
 
 
 var switchMenu = function (action, params) {
-    if (gameState == "started") {
+    if (gameState != "waiting") {
         $("div[id$='_menu']").css("display", "none");
         $("#" + action + "_menu").css("display", "block");
         if (params) {
@@ -31,8 +31,8 @@ require([], function () {
                 y: this.p.y - 30,
                 size: 12
             });
+            this.on('touch');
             this.add('2d, platformerControls, animation');
-            this.on("touch");
         },
         step: function (dt) {
             if (Q.inputs['up']) {
@@ -61,15 +61,22 @@ require([], function () {
             this.p.socket.emit('update', { id: this.p.playerId, x: this.p.x, y: this.p.y, sheet: this.p.sheet });
             infoDisplayers.location.updateInfo([this.p.x.toFixed(2), this.p.y.toFixed(2)]);
         },
+        touch: function () {
+            if (gameState == "voting") {
+                if (this.p.isCommander != false) {
+                    switchMenu("voting", {self: selfId, playerId: this.p.playerId, code: self.generateVotingCode()});
+                }
+            }
+        },
         exchange: function (playerId, isEnemy, isCommander) {
             this.p.socket.emit('exchange', {playerId: playerId, isEnemy: isEnemy, isCommander: isCommander});
-        },
-        touch: function (touch) {
-            switchMenu("self");
         },
         updateLabel: function () {
             this.p.nameLabel.p.x = this.p.x;
             this.p.nameLabel.p.y = this.p.y - 30;
+        },
+        generateVotingCode: function () {
+            return Math.round(Math.random() * 2048);
         },
         fire: function (actor) {
             var dx = actor.p.x - this.p.x;
@@ -118,11 +125,19 @@ require([], function () {
         },
         touch: function (touch) {
             if (this.p.isEnemy == false) {
-                if (this.p.isCommander == true && self.p.isCommander == false) {
-                    switchMenu("commander", {self: selfId, playerId: this.p.playerId});
+                console.log(gameState);
+                if (gameState == "voting") {
+                    if (this.p.isCommander != false) {
+                        switchMenu("voting", {self: selfId, playerId: this.p.playerId, code: self.generateVotingCode()});
+                    }
                 }
-                else if (self.p.isCommander == true && this.p.isCommander == true) {
-                    switchMenu("comrade", {self: selfId, playerId: this.p.playerId});
+                else if (gameState != "voted") {
+                    if (this.p.isCommander == true && self.p.isCommander == false) {
+                        switchMenu("commander", {self: selfId, playerId: this.p.playerId});
+                    }
+                    else if (self.p.isCommander == true && this.p.isCommander == true) {
+                        switchMenu("comrade", {self: selfId, playerId: this.p.playerId});
+                    }
                 }
             }
             else if (this.p.isEnemy != true) {

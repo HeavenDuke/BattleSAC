@@ -1,5 +1,4 @@
 #include "Voter.h"
-#include "Signature.hpp"
 
 Voter::Voter(RSA::PublicKey pubKey, RSA::PrivateKey privKey):
 	m_pubKey(pubKey), m_privKey(privKey), m_nBlinder(0L)
@@ -168,6 +167,26 @@ void Voter::ParseStringToVotes(const std::string& sVotes) {
 	split(sVotes, "|", &m_votes);
 }
 
-std::vector< std::pair<int,int> > GetVote(const std::vector< std::pair<int,int> > &votes, const std::vector< std::pair<PublicKeyString, PrivateKeyString> > &voterskey) {
-	return std::vector< std::pair<int,int> >(votes);
+std::map<int, std::vector<std::pair<int,int>> > GetVote(const std::map< int, std::pair<int,int> > &votes, const std::map<int, std::pair<PublicKeyString, PrivateKeyString> > &voterskey) {
+	std::map<int, std::vector<std::pair<int,int>> > notification;
+	std::vector<std::pair<int,int>> result;
+	std::map< int, std::pair<int,int> >::const_iterator it;
+
+    it = votes.begin();
+
+    while(it != votes.end())
+    {
+        result.push_back(it->second);
+        it++;
+    }
+
+    it = votes.begin();
+
+    while(it != votes.end())
+    {
+        notification[it->first] = result;
+        it++;
+    }
+
+	return notification;
 }

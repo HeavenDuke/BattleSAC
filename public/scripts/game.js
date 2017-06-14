@@ -73,6 +73,15 @@ $("#commander_menu").children().click(function () {
     $("canvas").focus();
 });
 
+$("#voting_menu").children().click(function () {
+    var params = JSON.parse($(this).parent().attr('params'));
+    socket.emit("voting", params);
+    eventLog("您投票给" + params.playerId +"号伞兵，票码为" + params.code + "，请等待其他队员确认投票");
+    gameState = "voted";
+    $(this).parent().css("display", "none");
+    $("canvas").focus();
+});
+
 Q.gravityY = 0;
 
 var objectFiles = [
@@ -84,13 +93,13 @@ require(objectFiles, function () {
     function setUp(stage) {
 
         socket.on('join', function (data) {
-            if (gameState != "started") {
+            if (gameState == "waiting") {
                 eventLog("已加入" + data['playerCount'] + "人，还差" + data['total'] + "人");
             }
         });
 
         socket.on('exit', function (data) {
-            if (gameState != "started") {
+            if (gameState == "waiting") {
                 eventLog("已加入" + data['playerCount'] + "人，还差" + data['total'] + "人");
             }
             var actor = players.filter(function (obj) {
@@ -324,6 +333,19 @@ require(objectFiles, function () {
                             actor.player.p.isCommander = false;
                             actor.player.p.sheet = actor.player.p.armed ? "armedfriend" : "friend";
                         }
+                        for(var i = 0; i < data.related.length; i++) {
+                            actor = players.filter(function (obj) {
+                                return obj.playerId == data['playerId'];
+                            })[0];
+                            if (actor) {
+                                actor.player.p.isCommander = false;
+                                actor.player.p.sheet = actor.player.p.armed ? "armedfriend" : "friend";
+                            }
+                            else if (data['playerId'] == selfId) {
+                                player.p.isCommander = false;
+                                player.p.sheet = player.p.armed ? "armedfriend" : "friend";
+                            }
+                        }
                     }
                     if (data.playerId == selfId) {
                         eventLog("您与" + data.playerId + "号伞兵进行了军衔比较，" + data.playerId + "的军衔更高");
@@ -387,6 +409,37 @@ require(objectFiles, function () {
                         }
                     }
                 }
+            });
+
+            socket.on('electionStart', function (data) {
+                eventLog(data.message);
+                gameState = "voting";
+            });
+
+            socket.on('electionFinished', function (data) {
+               var result = {}, maxn = Number.MIN_VALUE, maxid;
+               for(var i = 0; i < data.length; i++) {
+                   result[data[i].votedId] = result[data[i].votedId] ? result[data[i].votedId] + 1 : 0;
+               }
+               console.log(result);
+               for(var id in result) {
+                   if (maxn < result[id]) {
+                       maxn = result[id];
+                       maxid = id;
+                   }
+               }
+               for(var i = 0; i < players.length; i++) {
+                   if (players[i].playerId != parseInt(maxid) && players[i].player.p.isEnemy == false) {
+                       players[i].player.p.isCommander = false;
+                       players[i].player.p.sheet = 'armedfriend';
+                   }
+               }
+               if (selfId != maxid) {
+                   self.p.isCommander = false;
+                   self.p.sheet = 'armedfriend';
+               }
+               eventLog("投票选举结束，" + maxid + "号伞兵为指挥官");
+               gameState = "started";
             });
 
             socket.on('win', function () {

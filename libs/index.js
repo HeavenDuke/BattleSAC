@@ -11,3 +11,5 @@ exports.supplement = require('./build/Release/supplement.node');
 exports.voting = require('./build/Release/voting.node');
 
 exports.random = require('./rand');
+
+exports.array = require('./array');

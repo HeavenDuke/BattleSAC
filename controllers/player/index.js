@@ -4,6 +4,7 @@
 
 var authentication = require('../../libs').authentication;
 var voting = require('../../libs').voting;
+var array = require('../../libs').array;
 
 module.exports = function (io) {
     io.on('connection', function (socket) {
@@ -231,21 +232,87 @@ module.exports = function (io) {
                                     }
                                 }
                                 player.authenticated[data.playerId].socket.emit('comparison', {id: [data.playerId, player.id]});
+                                player.le_me.push(data.playerId);
+                                player.le_me = player.le_me.concat(global.gameData.players[data.playerId].le_me);
+                                player.le_me = array.unique(player.le_me);
+                                global.gameData.players[data.playerId].le_me.push(player.id);
+                                global.gameData.players[data.playerId].le_me = global.gameData.players[data.playerId].le_me.concat(player.le_me);
+                                global.gameData.players[data.playerId].le_me = array.unique(global.gameData.players[data.playerId].le_me);
                                 break;
                             default:
                                 var loserId = result == -1 ? player.id : data.playerId;
                                 var winnerId = result == -1 ? data.playerId : player.id;
+                                global.gameData.players[loserId].parent = winnerId;
+                                if (loserId == player.id) {
+                                    global.gameData.players[data.playerId].le_me.push(player.id);
+                                    global.gameData.players[data.playerId].le_me = global.gameData.players[data.playerId].le_me.concat(player.le_me);
+                                    global.gameData.players[data.playerId].le_me = array.unique(global.gameData.players[data.playerId].le_me);
+                                }
+                                else {
+                                    player.le_me.push(data.playerId);
+                                    player.le_me = player.le_me.concat(global.gameData.players[data.playerId].le_me);
+                                    player.le_me = array.unique(player.le_me);
+                                }
                                 for(var id in player.authenticated) {
                                     if (id in player.authenticated_me) {
-                                        player.authenticated[id].socket.emit('comparison', {playerId: loserId, winnerId: winnerId});
+                                        player.authenticated[id].socket.emit('comparison', {playerId: loserId, winnerId: winnerId, related: global.gameData.players[loserId].le_me});
                                     }
                                 }
                                 player.socket.emit('comparison', {playerId: loserId, winnerId: winnerId});
                                 break;
                         }
+                        var cnt = 0;
+                        for(var id in player.authenticated) {
+                            if (id in player.authenticated_me) {
+                                cnt++;
+                            }
+                        }
+                        if (cnt == player.le_me.length + 1) {
+                            var commander = 0;
+                            for(var id in player.authenticated) {
+                                if (id in player.authenticated_me && global.gameData.players[id].parent == id) {
+                                    commander++;
+                                }
+                            }
+                            if (commander != 1) {
+                                for(var id in player.authenticated) {
+                                    if (id in player.authenticated_me && global.gameData.players[id].parent == id) {
+                                        global.gameData.players[id].socket.emit('electionStart', {message: "存在多个最高指挥官，现在开始投票选举"})
+                                    }
+                                }
+                            }
+                        }
                     }
                     else {
                         player.socket.emit('comparison', {message: '对方尚未确认您的身份'});
+                    }
+                });
+
+                socket.on('voting', function (data) {
+                    player.vote(data.playerId, data.code);
+                    var allvoted = true;
+                    var election = [];
+                    for(var id in player.authenticated) {
+                        if (id in player.authenticated_me) {
+                            if (!global.gameData.players[id].voting) {
+                                allvoted = false;
+                                break;
+                            }
+                            election.push({
+                                voterId: id,
+                                code: global.gameData.players[id].voting.code,
+                                votedId: global.gameData.players[id].voting.votedId,
+                                public: player.key.public,
+                                private: player.key.private
+                            });
+                        }
+                    }
+                    if (allvoted) {
+                        var result = voting.anonymousVoting(election);
+                        for(var id in result) {
+                            global.gameData.players[id].voting = undefined;
+                            global.gameData.players[id].socket.emit('electionFinished', result[id]);
+                        }
                     }
                 });
 
