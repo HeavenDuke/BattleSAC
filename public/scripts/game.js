@@ -23,6 +23,18 @@ var infoDisplayers = {
         }
     }
 };
+
+var displayElection = function (votings) {
+    var modal = $("#election");
+    var form = modal.find("table");
+    form.empty();
+    form.append($("<tr><th class='text-center'>票码</th><th class='text-center'>伞兵编号</th></tr>"));
+    for(var i = 0; i < votings.length; i++) {
+        form.append($("<tr class='text-center'><td>" + votings[i].code + "</td><td>" + votings[i].votedId + "</td></tr>"));
+    }
+    modal.modal();
+};
+
 var socket = io.connect(window.location.origin);
 
 var Q = Quintus({audioSupported: ['wav', 'mp3']})
@@ -144,6 +156,7 @@ require(objectFiles, function () {
                         actor.player.p.isCommander = data.isCommander;
                         player.exchange(actor.playerId, false, actor.player.p.isCommander);
                         eventLog("成功与" + data['playerId'] + "号伞兵进行认证，资讯已与友军同步");
+                        gameState = "started";
                     }
                     else if (data.valid == false) {
                         actor.player.p.isEnemy = true;
@@ -417,29 +430,41 @@ require(objectFiles, function () {
             });
 
             socket.on('electionFinished', function (data) {
-               var result = {}, maxn = Number.MIN_VALUE, maxid;
+               var result = {}, maxn = 0, maxid;
                for(var i = 0; i < data.length; i++) {
-                   result[data[i].votedId] = result[data[i].votedId] ? result[data[i].votedId] + 1 : 0;
+                   result[data[i].votedId] = result[data[i].votedId] ? result[data[i].votedId] + 1 : 1;
                }
-               console.log(result);
                for(var id in result) {
                    if (maxn < result[id]) {
                        maxn = result[id];
                        maxid = id;
                    }
                }
-               for(var i = 0; i < players.length; i++) {
-                   if (players[i].playerId != parseInt(maxid) && players[i].player.p.isEnemy == false) {
-                       players[i].player.p.isCommander = false;
-                       players[i].player.p.sheet = 'armedfriend';
+               var cnt = 0;
+               for(var id in result) {
+                   if (maxn == result[id]) {
+                       cnt++;
                    }
                }
-               if (selfId != maxid) {
-                   self.p.isCommander = false;
-                   self.p.sheet = 'armedfriend';
+               if (cnt > 1) {
+                    eventLog("选举结果中存在多个胜出者，重新投票");
+                    gameState = "voting";
                }
-               eventLog("投票选举结束，" + maxid + "号伞兵为指挥官");
-               gameState = "started";
+               else {
+                   for (var i = 0; i < players.length; i++) {
+                       if (players[i].playerId != parseInt(maxid) && players[i].player.p.isEnemy == false) {
+                           players[i].player.p.isCommander = false;
+                           players[i].player.p.sheet = players[i].player.p.armed ? 'armedfriend' : "friend";
+                       }
+                   }
+                   if (selfId != maxid) {
+                       self.p.isCommander = false;
+                       self.p.sheet = self.p.armed ? 'armedfriend' : "friend";
+                   }
+                   eventLog("投票选举结束，" + maxid + "号伞兵为指挥官");
+                   gameState = "started";
+               }
+                displayElection(data);
             });
 
             socket.on('win', function () {
