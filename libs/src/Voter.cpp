@@ -167,11 +167,13 @@ void Voter::ParseStringToVotes(const std::string& sVotes) {
 	split(sVotes, "|", &m_votes);
 }
 
-std::map<int, std::vector<std::pair<int,int>> > GetVote(const std::map< int, std::pair<int,int> > &votes, const std::map<int, std::pair<PublicKeyString, PrivateKeyString> > &voterskey) {
+std::map<int, std::vector<std::pair<int,int>> > GetVote(const std::map< int, std::pair<int,int> > &votes, 
+						const std::map<int, std::pair<PublicKeyString, PrivateKeyString> > &voterskey) {
 	std::map<int, std::vector<std::pair<int,int>> > notification;
 	std::vector<std::pair<int,int>> result;
 	std::map< int, std::pair<int,int> >::const_iterator it;
 
+    /*
     it = votes.begin();
 
     while(it != votes.end())
@@ -179,6 +181,50 @@ std::map<int, std::vector<std::pair<int,int>> > GetVote(const std::map< int, std
         result.push_back(it->second);
         it++;
     }
+    */
+    int nVoter = votes.size();
+
+    it = votes.begin();
+    std::map< int, std::pair<PublicKeyString, PrivateKeyString> >::const_iterator it_key = voterskey.begin();
+    Voter *voters = new Voter[nVoter];
+    for(int i = 0 ; i < nVoter ; i++,it++,it_key++ ) {
+    	voters[i].Initialize(it_key->second.first.toRSA_PublicKey(),it_key->second.second.toRSA_PrivateKey());
+    	voters[i].SetVote(it->second.first, it->second.second);
+    }
+    
+    for(int i = 0 ; i < nVoter ; i++ ) {
+    	Integer vote = voters[i].SendForSign(voters[0]);
+    	vote = voters[i].RemoveBlind(vote);
+    	ostringstream os;
+		os << vote;
+		string s = os.str();
+		for (int j = nVoter-1; j >= 1; j--) {
+			std::string cipher = voters[j].Encrypt(s);
+			s = cipher;
+		}
+		voters[0].AddVote(s);
+    }
+
+    for (int i = 0; i < nVoter-1; i++) {
+		voters[i].Shuffle();
+		string voteSending = voters[i+1].Encrypt(voters[i].ParseVotesToString());
+		//cout << "voter "<< i << " send to voter "<< i + 1 << ": " << voteSending << endl;
+		voters[i].SendTo(voters[i+1], voteSending);
+		string voteString = voters[i+1].DecryptVote();
+		//cout << "voter " << i + 1 << " decrypt vote and get: " << voteString << endl;
+		voters[i+1].ParseStringToVotes(voteString);
+		for (int j = 0; j < voters[i+1].m_votes.size(); j++) {
+			voters[i + 1].m_votes[j] = voters[i+1].Decrypt(voters[i+1].m_votes[j]);
+		}
+	}
+
+	it = votes.begin();
+	for (int i = 0; i < voters[nVoter-1].m_votes.size(); i++) {
+		Integer nVote(voters[nVoter-1].m_votes[i].c_str());
+		Integer nowVote = pow_bin(nVote, voters[0].GetPubKey().GetPublicExponent(), voters[0].GetPubKey().GetModulus());
+		unsigned unVote = nowVote.ConvertToLong();
+		result.push_back(std::make_pair(GET_VID(unVote),GET_VOTE(unVote)));
+	}
 
     it = votes.begin();
 
@@ -188,5 +234,6 @@ std::map<int, std::vector<std::pair<int,int>> > GetVote(const std::map< int, std
         it++;
     }
 
+    delete[] voters;
 	return notification;
 }
