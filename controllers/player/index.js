@@ -66,6 +66,10 @@ module.exports = function (io) {
                         });
                     });
 
+                    socket.on('info', function () {
+                        socket.emit("info", {playerId: player.id, code: player.code, caseKeys: player.caseKeys});
+                    });
+
                     socket.on('update', function (data) {
                         global.gameData.players[data.id].location = [data.x, data.y];
                         socket.broadcast.emit('updated', data);

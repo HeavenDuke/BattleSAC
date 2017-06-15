@@ -9,20 +9,9 @@ var selfId = null;
 var self = null;
 var uiStage = null;
 var gameState = "waiting";
-var infoDisplayers = {
-    location: {
-        displayer: $("#location"),
-        updateInfo: function (location) {
-            $("#location").text("坐标: (" + location[0] + ", " + location[1] + ")");
-        }
-    },
-    code: {
-        displayer: $("#code"),
-        updateInfo: function (code) {
-            $("#code").text("暗号: " + code);
-        }
-    }
-};
+var LogPanel = null;
+var LocationPanel = null;
+var buttons = [];
 
 var displayElection = function (votings) {
     var modal = $("#election");
@@ -46,59 +35,70 @@ Q.touch(Q.SPRITE_ALL);
 
 function eventLog(message, log) {
     if (log) {
-        log = new Date() + ": " + log + "\n";
+        log = new Date().Format("yyyy-MM-dd hh:mm:ss") + " - " + log;
     }
     else {
-        log = new Date() + ": " + message + "\n";
+        log = new Date().Format("yyyy-MM-dd hh:mm:ss") + " - " + message;
     }
-    $("#eventlog").text(message);
-    $("#log").val($("#log").val() + log);
+    LogPanel.p.label = message;
+    $("#log_list").append($("<p style='-ms-word-break: break-all;word-break: break-all;'>" + log + "</p>"));
 }
-
-$("#unknown_menu").children().click(function () {
-    socket.emit("authentication", JSON.parse($(this).parent().attr('params')));
-    $(this).parent().css("display", "none");
-    $("canvas").focus();
-});
-
-$("#case_menu").children("#open").click(function () {
-    socket.emit("openCase", JSON.parse($(this).parent().attr('params')));
-    $(this).parent().css("display", "none");
-    $("canvas").focus();
-});
-
-$("#case_menu").children("#arm").click(function () {
-    socket.emit("arm", JSON.parse($(this).parent().attr('params')));
-    $(this).parent().css("display", "none");
-    $("canvas").focus();
-});
-
-$("#comrade_menu").children().click(function () {
-    socket.emit("comparison", JSON.parse($(this).parent().attr('params')));
-    $(this).parent().css("display", "none");
-    $("canvas").focus();
-});
-
-$("#commander_menu").children().click(function () {
-    socket.emit("submission", JSON.parse($(this).parent().attr('params')));
-    $(this).parent().css("display", "none");
-    $("canvas").focus();
-});
-
-$("#voting_menu").children().click(function () {
-    var params = JSON.parse($(this).parent().attr('params'));
-    socket.emit("voting", params);
-    eventLog("您投票给" + params.playerId +"号伞兵，票码为" + params.code + "，请等待其他队员确认投票");
-    gameState = "voted";
-    $(this).parent().css("display", "none");
-    $("canvas").focus();
-});
 
 Q.gravityY = 0;
 
 var objectFiles = [
     '/scripts/Player.js'
 ];
+
+var destroyMenu = function () {
+    for(var i = 0; i < buttons.length; i++) {
+        buttons[i].destroy();
+    }
+    buttons = [];
+    var x = Q.width  - 150;
+    var y = 50;
+    var size = 20;
+    var button = new Q.UI.Button({
+        label: "行动日志",
+        x: x,
+        y: y,
+        size: size,
+        fill: "#cccccc",
+        color: "white",
+        border: 5,
+        shadow: 5,
+        shadowColor: "rgba(0,0,0,0.5)"
+    }, function () {
+        $("#logpanel").modal();
+    });
+    uiStage.insert(button);
+    buttons.push(button);
+};
+
+var switchMenu = function (_buttons) {
+    destroyMenu();
+    if (gameState != "waiting") {
+        var x = Q.width  - 150;
+        var y = 110;
+        var size = 20;
+        for(var i = 0; i < _buttons.length; i++) {
+            var button = new Q.UI.Button({
+                label: _buttons[i].label,
+                x: x,
+                y: y,
+                size: size,
+                fill: "#cccccc",
+                color: "white",
+                border: 5,
+                shadow: 5,
+                shadowColor: "rgba(0,0,0,0.5)"
+            }, _buttons[i].action);
+            uiStage.insert(button);
+            buttons.push(button);
+            y += size * 3;
+        }
+    }
+};
 
 require(objectFiles, function () {
 
@@ -129,16 +129,16 @@ require(objectFiles, function () {
                 x: data.initial_location[0],
                 y: data.initial_location[1],
                 socket: socket,
-                stage: stage
-            });uiStage = stage;
+                stage: stage,
+                code: data.code
+            });
             self = player;
             player.p.sheet = 'commander';
             stage.insert(player);
             stage.insert(player.p.nameLabel);
             stage.add('viewport').follow(player);
 
-            infoDisplayers.location.updateInfo(data.initial_location);
-            infoDisplayers.code.updateInfo(data.code);
+            player.updateLocation(data.initial_location);
 
             socket.on('authentication', function (data) {
                 var actor = players.filter(function (obj) {
@@ -165,6 +165,17 @@ require(objectFiles, function () {
                         eventLog("发现敌方单位，资讯已与友军同步");
                     }
                 }
+            });
+
+            socket.on('info', function (data) {
+                console.log(data);
+                $("#playerId").text(data.playerId);
+                $("#code").text(data.code);
+                $("#caseKeys").empty();
+                data.caseKeys.forEach(function (key) {
+                    $("#caseKeys").append($("<p style='-ms-word-break: break-all;word-break: break-all;'>(" + key.x + ", " + key.fx + ")</p>"));
+                });
+                $("#info").modal();
             });
 
             socket.on('exchange', function (data) {
@@ -405,7 +416,8 @@ require(objectFiles, function () {
                 if (data.playerId == selfId) {
                     self.p.nameLabel.destroy();
                     self.destroy();
-                    eventLog('you are busted!');
+                    gameState = "waiting";
+                    eventLog('你死了!');
                 }
                 else {
                     actor = players.filter(function (obj) {
@@ -430,49 +442,69 @@ require(objectFiles, function () {
             });
 
             socket.on('electionFinished', function (data) {
-               var result = {}, maxn = 0, maxid;
-               for(var i = 0; i < data.length; i++) {
-                   result[data[i].votedId] = result[data[i].votedId] ? result[data[i].votedId] + 1 : 1;
-               }
-               for(var id in result) {
-                   if (maxn < result[id]) {
-                       maxn = result[id];
-                       maxid = id;
-                   }
-               }
-               var cnt = 0;
-               for(var id in result) {
-                   if (maxn == result[id]) {
-                       cnt++;
-                   }
-               }
-               if (cnt > 1) {
-                    eventLog("选举结果中存在多个胜出者，重新投票");
-                    gameState = "voting";
-               }
-               else {
-                   for (var i = 0; i < players.length; i++) {
-                       if (players[i].playerId != parseInt(maxid) && players[i].player.p.isEnemy == false) {
-                           players[i].player.p.isCommander = false;
-                           players[i].player.p.sheet = players[i].player.p.armed ? 'armedfriend' : "friend";
-                       }
-                   }
-                   if (selfId != maxid) {
-                       self.p.isCommander = false;
-                       self.p.sheet = self.p.armed ? 'armedfriend' : "friend";
-                   }
-                   eventLog("投票选举结束，" + maxid + "号伞兵为指挥官");
-                   gameState = "started";
-               }
-                displayElection(data);
+                setTimeout(function () {
+                    var result = {}, maxn = 0, maxid;
+                    for(var i = 0; i < data.length; i++) {
+                        result[data[i].votedId] = result[data[i].votedId] ? result[data[i].votedId] + 1 : 1;
+                    }
+                    for(var id in result) {
+                        if (maxn < result[id]) {
+                            maxn = result[id];
+                            maxid = id;
+                        }
+                    }
+                    var cnt = 0;
+                    for(var id in result) {
+                        if (maxn == result[id]) {
+                            cnt++;
+                        }
+                    }
+                    if (cnt > 1) {
+                        var log = "选举结果中存在多个胜出者，重新投票。本轮投票如下：";
+                        for(i = 0; i < data.length; i++) {
+                            if (i != 0) {
+                                log += ", ";
+                            }
+                            log += "(票码: " + data[i].code + ", 投给: " + data[i].votedId + "号)";
+                        }
+                        eventLog("选举结果中存在多个胜出者，重新投票", log);
+                        gameState = "voting";
+                    }
+                    else {
+                        for (var i = 0; i < players.length; i++) {
+                            if (players[i].playerId != parseInt(maxid) && players[i].player.p.isEnemy == false) {
+                                players[i].player.p.isCommander = false;
+                                players[i].player.p.sheet = players[i].player.p.armed ? 'armedfriend' : "friend";
+                            }
+                        }
+                        if (selfId != maxid) {
+                            self.p.isCommander = false;
+                            self.p.sheet = self.p.armed ? 'armedfriend' : "friend";
+                        }
+                        log = "投票选举结束，" + maxid + "号伞兵为指挥官。投票如下：";
+                        for(i = 0; i < data.length; i++) {
+                            if (i != 0) {
+                                log += ", ";
+                            }
+                            log += "(票码: " + data[i].code + ", 投给: " + data[i].votedId + "号)";
+                        }
+                        eventLog("投票选举结束，" + maxid + "号伞兵为指挥官", log);
+                        gameState = "started";
+                    }
+                    displayElection(data);
+                }, 1500);
             });
 
             socket.on('win', function () {
-                eventLog("your team wins!");
+                setTimeout(function () {
+                    eventLog("游戏结束，您的队伍获胜!");
+                }, 400);
             });
 
             socket.on('lose', function () {
-                eventLog("your team lost!");
+                setTimeout(function () {
+                    eventLog("游戏结束，敌军获胜!");
+                }, 400);
             });
 
         });
@@ -525,7 +557,22 @@ require(objectFiles, function () {
 
 
     Q.scene('information', function (stage) {
-
+        LogPanel = new Q.UI.Text({
+            x: $("body").width() / 2,
+            y: 20,
+            size: 18,
+            label: " "
+        });
+        LocationPanel = new Q.UI.Text({
+            x: 100,
+            y: 20,
+            size: 14,
+            label: "坐标: "
+        });
+        stage.insert(LogPanel);
+        stage.insert(LocationPanel);
+        uiStage = stage;
+        destroyMenu();
     });
 
     var files = [

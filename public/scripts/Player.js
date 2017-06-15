@@ -3,16 +3,6 @@
  */
 
 
-var switchMenu = function (action, params) {
-    if (gameState != "waiting") {
-        $("div[id$='_menu']").css("display", "none");
-        $("#" + action + "_menu").css("display", "block");
-        if (params) {
-            $("#" + action + "_menu").attr("params", JSON.stringify(params));
-        }
-    }
-};
-
 require([], function () {
     Q.Sprite.extend('Player', {
         init: function (p) {
@@ -53,19 +43,45 @@ require([], function () {
             }
 
             if (Q.inputs['up'] || Q.inputs['down'] || Q.inputs['left'] || Q.inputs['right']) {
-                switchMenu("none");
+                destroyMenu();
             }
 
             this.updateLabel();
 
             this.p.socket.emit('update', { id: this.p.playerId, x: this.p.x, y: this.p.y, sheet: this.p.sheet });
-            infoDisplayers.location.updateInfo([this.p.x.toFixed(2), this.p.y.toFixed(2)]);
+            this.updateLocation([this.p.x.toFixed(2), this.p.y.toFixed(2)]);
         },
         touch: function () {
             if (gameState == "voting") {
                 if (this.p.isCommander != false) {
-                    switchMenu("voting", {self: selfId, playerId: this.p.playerId, code: self.generateVotingCode()});
+                    var param = {self: selfId, playerId: this.p.playerId, code: self.generateVotingCode()};
+                    var socket = self.p.socket;
+                    switchMenu([{
+                        label: "我的信息",
+                        action: function () {
+                            socket.emit("info", {});
+                            destroyMenu();
+                        }
+                    }, {
+                        label: "投票给我",
+                        action: function () {
+                            socket.emit("voting", param);
+                            eventLog("您投票给自己，票码为" + param.code + "，请等待其他队员确认投票");
+                            gameState = "voted";
+                            destroyMenu();
+                        }
+                    }])
                 }
+            }
+            else {
+                socket = self.p.socket;
+                switchMenu([{
+                    label: "我的信息",
+                    action: function () {
+                        socket.emit("info", {});
+                        destroyMenu();
+                    }
+                }]);
             }
         },
         exchange: function (playerId, isEnemy, isCommander) {
@@ -74,6 +90,9 @@ require([], function () {
         updateLabel: function () {
             this.p.nameLabel.p.x = this.p.x;
             this.p.nameLabel.p.y = this.p.y - 30;
+        },
+        updateLocation: function (location) {
+            LocationPanel.p.label = "坐标: (" + location[0] + ", " + location[1] + ")";
         },
         generateVotingCode: function () {
             return Math.round(Math.random() * 2048);
@@ -128,20 +147,54 @@ require([], function () {
                 console.log(gameState);
                 if (gameState == "voting") {
                     if (this.p.isCommander != false) {
-                        switchMenu("voting", {self: selfId, playerId: this.p.playerId, code: self.generateVotingCode()});
+                        var param = {self: selfId, playerId: this.p.playerId, code: self.generateVotingCode()};
+                        var socket = self.p.socket;
+                        switchMenu([{
+                            label: "投票给他",
+                            action: function () {
+                                socket.emit("voting", param);
+                                eventLog("您投票给" + param.playerId +"号伞兵，票码为" + param.code + "，请等待其他队员确认投票");
+                                gameState = "voted";
+                                destroyMenu();
+                            }
+                        }]);
                     }
                 }
                 else if (gameState != "voted") {
                     if (this.p.isCommander == true && self.p.isCommander == false) {
-                        switchMenu("commander", {self: selfId, playerId: this.p.playerId});
+                        param = {self: selfId, playerId: this.p.playerId};
+                        socket = self.p.socket;
+                        switchMenu([{
+                            label: "上交钥匙",
+                            action: function () {
+                                socket.emit("submission", param);
+                                destroyMenu();
+                            }
+                        }]);
                     }
                     else if (self.p.isCommander == true && this.p.isCommander == true) {
-                        switchMenu("comrade", {self: selfId, playerId: this.p.playerId});
+                        param = {self: selfId, playerId: this.p.playerId};
+                        socket = self.p.socket;
+                        switchMenu([{
+                            label: "比较军衔",
+                            action: function () {
+                                socket.emit("comparison", param);
+                                destroyMenu();
+                            }
+                        }]);
                     }
                 }
             }
             else if (this.p.isEnemy != true) {
-                switchMenu("unknown", {self: selfId, playerId: this.p.playerId});
+                param = {self: selfId, playerId: this.p.playerId};
+                socket = self.p.socket;
+                switchMenu([{
+                    label: "身份认证",
+                    action: function () {
+                        socket.emit("authentication", param);
+                        destroyMenu();
+                    }
+                }]);
             }
             else if (self.p.armed) {
                 self.fire(this);
@@ -180,14 +233,26 @@ require([], function () {
         },
         touch: function (touch) {
             if (!this.p.opened) {
-                switchMenu("case", {playerId: selfId, caseId: this.p.caseId});
-                $("#open").css("display", "block");
-                $("#arm").css("display", "none");
+                var param = {playerId: selfId, caseId: this.p.caseId};
+                socket = self.p.socket;
+                switchMenu([{
+                    label: "开启补给箱",
+                    action: function () {
+                        socket.emit("openCase", param);
+                        destroyMenu();
+                    }
+                }]);
             }
             else {
-                switchMenu("case", {playerId: selfId, caseId: this.p.caseId});
-                $("#open").css("display", "none");
-                $("#arm").css("display", "block");
+                param = {playerId: selfId, caseId: this.p.caseId};
+                socket = self.p.socket;
+                switchMenu([{
+                    label: "获取装备",
+                    action: function () {
+                        socket.emit("arm", param);
+                        destroyMenu();
+                    }
+                }]);
             }
         },
         open: function () {

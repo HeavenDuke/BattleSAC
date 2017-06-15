@@ -8,6 +8,16 @@
 
 using namespace CryptoPP;
 
+CryptoPP::Integer pow_bin(CryptoPP::Integer x, CryptoPP::Integer e, CryptoPP::Integer mod) {
+	Integer res = 1;
+	while (e>0) {
+		if (e.IsOdd()) res = res * x % mod;
+		x = x * x % mod;
+		e >>= 1;
+	}
+	return res % mod;
+}
+
 CryptoPP::Integer Str2BigInt(std::string str) {
 	return CryptoPP::Integer(str.c_str());
 }

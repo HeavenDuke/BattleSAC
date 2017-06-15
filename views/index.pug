@@ -4,22 +4,7 @@ block specified_ref
     link(rel="stylesheet" href="/stylesheets/theme.css")
     script(type="text/javascript" src="socket.io/socket.io.js")
 block content
-    div#voting_menu(style="display:none;")
-        button 投票
-    div#unknown_menu(style="display:none;")
-        button 身份认证
-    div#comrade_menu(style="display:none;")
-        button 军衔比较
-    div#commander_menu(style="display:none;")
-        button 上交钥匙
-    div#case_menu(style="display:none;")
-        button#open 开启补给箱
-        button#arm 获取武器
-    div.row
-        .col-lg-2#location.eventlog
-        .col-lg-7#eventlog.text-center.eventlog
-        .col-lg-3#code.eventlog(style="font-size: 16px;")
-    textarea.hidden.form-control#log
+    canvas#game(width="100%" height="100%")
     .modal.fade#election
         .modal-dialog
             .modal-content
@@ -33,6 +18,37 @@ block content
                             th.text-center 伞兵编号
                 .modal-footer.text-center
                     a.btn.btn-primary(href="#" data-dismiss="modal") 关闭
-    canvas#game(width="100%" height="100%")
+    .modal.fade#info
+        .modal-dialog
+            .modal-content
+                .modal-header
+                    button.close(data-dismiss="modal") &times;
+                    h4.modal-title 个人信息
+                .modal-body
+                    table.table
+                        tr.text-center
+                            td
+                                strong 编号
+                            td#playerId
+                        tr.text-center
+                            td
+                                strong 小队暗号
+                            td#code
+                        tr
+                            td
+                                strong 持有钥匙
+                            td#caseKeys
+                .modal-footer.text-center
+                    a.btn.btn-primary(href="#" data-dismiss="modal") 关闭
+    .modal.fade#logpanel
+        .modal-dialog
+            .modal-content
+                .modal-header
+                    button.close(data-dismiss="modal") &times;
+                    h4.modal-title 行动日志
+                .modal-body
+                    ul#log_list
+                .modal-footer.text-center
+                    a.btn.btn-primary(href="#" data-dismiss="modal") 关闭
     script(type="text/javascript" src="https://cdn.bootcss.com/require.js/2.3.3/require.min.js")
     script(type="text/javascript" src="/scripts/game.js")
