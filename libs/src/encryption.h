@@ -31,7 +31,7 @@ class PublicKeyString {
             Modulus_n = BigInt2Str(key.GetModulus());
             PublicExponent_e = BigInt2Str(key.GetPublicExponent());
         }
-        RSA::PublicKey toRSA_PublicKey() {
+        RSA::PublicKey toRSA_PublicKey() const {
             RSA::PublicKey key;
             key.Initialize(
                 Str2BigInt(Modulus_n),
@@ -60,7 +60,7 @@ class PrivateKeyString {
             PublicExponent_e = BigInt2Str(key.GetPublicExponent());
             PrivateExponent_d = BigInt2Str(key.GetPrivateExponent());
         }
-        RSA::PrivateKey toRSA_PrivateKey() {
+        RSA::PrivateKey toRSA_PrivateKey() const {
             RSA::PrivateKey key;
             key.Initialize(
                 Str2BigInt(Modulus_n),
