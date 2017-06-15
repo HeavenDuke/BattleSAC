@@ -10,7 +10,6 @@
 #include <hex.h>
 #include <vector>
 #include <map>
-
 #include "encryption.h"
 
 using CryptoPP::AutoSeededRandomPool;
@@ -26,9 +25,11 @@ class Voter {
 public:
 	Voter(RSA::PublicKey pubKey, RSA::PrivateKey privKey);
 	Voter();
+	Voter(const Voter& voter);
+	Voter& operator=(const Voter &);
 	void Initialize(RSA::PublicKey pubKey, RSA::PrivateKey privKey);
 	void SetVote(int vid, int vote);
-	Integer SendForSign(const Voter& signer);
+	Integer SendForSign(const Voter& signer,Integer nVote);
 	Integer SignVote(const Integer& unVote) const;
 	RSA::PublicKey GetPubKey() const;
 	unsigned GetVote() const;
@@ -41,21 +42,21 @@ public:
 	std::string ParseVotesToString();
 	void ParseStringToVotes(const std::string& sVotes);
 	std::string DecryptVote();
+	bool operator<(const Voter& b) const;
 private:
 	Integer PowBinMod(Integer x, Integer e, Integer mod) const;
 private:
 	RSA::PublicKey m_pubKey;
 	RSA::PrivateKey m_privKey;
 	Integer m_nBlinder;
-	unsigned m_unVote; // 后8位为选票,前24位为代号
+	unsigned m_unVote;
 	Integer m_nSignerModulos;
 	Integer m_nSignerExponent;
 	std::string m_sMsg;
 	AutoSeededRandomPool m_rng;
+	Integer m_nModulos;
 public:
 	std::vector<std::string> m_votes;
 };
-
-std::map<int, std::vector<std::pair<int,int>> > GetVote(const std::map< int, std::pair<int,int> > &votes, const std::map<int, std::pair<PublicKeyString, PrivateKeyString> > &voterskey);
 
 #endif

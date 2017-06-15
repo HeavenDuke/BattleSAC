@@ -5,12 +5,29 @@ Voter::Voter(RSA::PublicKey pubKey, RSA::PrivateKey privKey):
 {
 }
 
+Voter::Voter(const Voter& voter) {
+	this->m_pubKey = voter.m_pubKey;
+	this->m_privKey = voter.m_privKey;
+	this->m_nBlinder = voter.m_nBlinder;
+	this->m_nModulos = voter.m_nModulos;
+	this->m_nSignerExponent = voter.m_nSignerExponent;
+	this->m_nSignerModulos = voter.m_nSignerModulos;
+	this->m_sMsg = voter.m_sMsg;
+	this->m_unVote = voter.m_unVote;
+	this->m_votes = voter.m_votes;
+}
+
 Voter::Voter(){}
+
+bool Voter::operator<(const Voter& b) const {
+	return m_nModulos < b.m_nModulos;
+}
 
 void Voter::Initialize(RSA::PublicKey pubKey, RSA::PrivateKey privKey) {
 	m_pubKey = pubKey;
 	m_privKey = privKey;
 	m_nBlinder = 0;
+	m_nModulos = pubKey.GetModulus();
 }
 
 void Voter::SetVote(int vid, int vote) {
@@ -20,7 +37,7 @@ void Voter::SetVote(int vid, int vote) {
 	this->m_unVote = MAKE_VOTE(vid, vote);
 }
 
-Integer Voter::SendForSign(const Voter& signer) {
+Integer Voter::SendForSign(const Voter& signer,Integer nVote) {
 	AutoSeededRandomPool rng;
 	Integer s = rng.GenerateWord32();
 	m_nSignerModulos = signer.GetPubKey().GetModulus();
@@ -30,7 +47,7 @@ Integer Voter::SendForSign(const Voter& signer) {
 	}
 	m_nBlinder = s;
 	Integer blindVote = PowBinMod(m_nBlinder, m_nSignerExponent,m_nSignerModulos);
-	Integer signedVote = signer.SignVote(blindVote*m_unVote);
+	Integer signedVote = signer.SignVote(blindVote*nVote);
 	return signedVote;
 }
 
@@ -167,6 +184,19 @@ void Voter::ParseStringToVotes(const std::string& sVotes) {
 	split(sVotes, "|", &m_votes);
 }
 
+Voter& Voter::operator=(const Voter &voter) {
+	this->m_pubKey = voter.m_pubKey;
+	this->m_privKey = voter.m_privKey;
+	this->m_nBlinder = voter.m_nBlinder;
+	this->m_nModulos = voter.m_nModulos;
+	this->m_nSignerExponent = voter.m_nSignerExponent;
+	this->m_nSignerModulos = voter.m_nSignerModulos;
+	this->m_sMsg = voter.m_sMsg;
+	this->m_unVote = voter.m_unVote;
+	this->m_votes = voter.m_votes;
+	return *this;
+}
+
 std::map<int, std::vector<std::pair<int,int>> > GetVote(const std::map< int, std::pair<int,int> > &votes, 
 						const std::map<int, std::pair<PublicKeyString, PrivateKeyString> > &voterskey) {
 	std::map<int, std::vector<std::pair<int,int>> > notification;
@@ -192,9 +222,14 @@ std::map<int, std::vector<std::pair<int,int>> > GetVote(const std::map< int, std
     	voters[i].SetVote(it->second.first, it->second.second);
     }
     
+    sort(voters,voters+nVoter);
+
     for(int i = 0 ; i < nVoter ; i++ ) {
-    	Integer vote = voters[i].SendForSign(voters[0]);
-    	vote = voters[i].RemoveBlind(vote);
+    	Integer vote = voters[i].GetVote();
+		for (int j = 0; j < nVoter; j++) {
+			vote = voters[i].SendForSign(voters[j], vote);
+			vote = voters[i].RemoveBlind(vote);
+		}
     	ostringstream os;
 		os << vote;
 		string s = os.str();
@@ -221,7 +256,10 @@ std::map<int, std::vector<std::pair<int,int>> > GetVote(const std::map< int, std
 	it = votes.begin();
 	for (int i = 0; i < voters[nVoter-1].m_votes.size(); i++) {
 		Integer nVote(voters[nVoter-1].m_votes[i].c_str());
-		Integer nowVote = pow_bin(nVote, voters[0].GetPubKey().GetPublicExponent(), voters[0].GetPubKey().GetModulus());
+		Integer nowVote = nVote;
+		for (int j = nVoter-1; j >= 0; j--) {
+			nowVote = pow_bin(nowVote, voters[j].GetPubKey().GetPublicExponent(), voters[j].GetPubKey().GetModulus());
+		}
 		unsigned unVote = nowVote.ConvertToLong();
 		result.push_back(std::make_pair(GET_VID(unVote),GET_VOTE(unVote)));
 	}
