@@ -8,6 +8,16 @@
 
 using namespace CryptoPP;
 
+CryptoPP::Integer pow_bin(CryptoPP::Integer x, CryptoPP::Integer e, CryptoPP::Integer mod) {
+	Integer res = 1;
+	while (e>0) {
+		if (e.IsOdd()) res = res * x % mod;
+		x = x * x % mod;
+		e >>= 1;
+	}
+	return res % mod;
+}
+
 CryptoPP::Integer Str2BigInt(std::string str) {
 	return CryptoPP::Integer(str.c_str());
 }
@@ -31,7 +41,7 @@ class PublicKeyString {
             Modulus_n = BigInt2Str(key.GetModulus());
             PublicExponent_e = BigInt2Str(key.GetPublicExponent());
         }
-        RSA::PublicKey toRSA_PublicKey() {
+        RSA::PublicKey toRSA_PublicKey() const {
             RSA::PublicKey key;
             key.Initialize(
                 Str2BigInt(Modulus_n),
@@ -60,7 +70,7 @@ class PrivateKeyString {
             PublicExponent_e = BigInt2Str(key.GetPublicExponent());
             PrivateExponent_d = BigInt2Str(key.GetPrivateExponent());
         }
-        RSA::PrivateKey toRSA_PrivateKey() {
+        RSA::PrivateKey toRSA_PrivateKey() const {
             RSA::PrivateKey key;
             key.Initialize(
                 Str2BigInt(Modulus_n),

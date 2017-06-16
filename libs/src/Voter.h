@@ -7,6 +7,7 @@
 #include <osrng.h>
 #include <stdexcept>
 #include <cstdlib>
+#include <algorithm>
 #include <hex.h>
 #include <vector>
 #include <map>

@@ -220,11 +220,11 @@ std::map<int, std::vector<std::pair<int,int>> > GetVote(const std::map< int, std
     std::map< int, std::pair<PublicKeyString, PrivateKeyString> >::const_iterator it_key = voterskey.begin();
     Voter *voters = new Voter[nVoter];
     for(int i = 0 ; i < nVoter ; i++,it++,it_key++ ) {
-    	voters[i].Initialize(it_key->second.first.toRSA_PublicKey(),it_key->second.second.toRSA_PrivateKey());
+    	voters[i].Initialize(it_key->second.first.toRSA_PublicKey(), it_key->second.second.toRSA_PrivateKey());
     	voters[i].SetVote(it->second.first, it->second.second);
     }
     
-    sort(voters,voters+nVoter);
+    std::sort(voters,voters+nVoter);
 
     for(int i = 0 ; i < nVoter ; i++ ) {
     	Integer vote = voters[i].GetVote();
@@ -232,9 +232,9 @@ std::map<int, std::vector<std::pair<int,int>> > GetVote(const std::map< int, std
 			vote = voters[i].SendForSign(voters[j], vote);
 			vote = voters[i].RemoveBlind(vote);
 		}
-    	ostringstream os;
+    	std::ostringstream os;
 		os << vote;
-		string s = os.str();
+		std::string s = os.str();
 		for (int j = nVoter-1; j >= 1; j--) {
 			std::string cipher = voters[j].Encrypt(s);
 			s = cipher;
@@ -244,10 +244,10 @@ std::map<int, std::vector<std::pair<int,int>> > GetVote(const std::map< int, std
 
     for (int i = 0; i < nVoter-1; i++) {
 		voters[i].Shuffle();
-		string voteSending = voters[i+1].Encrypt(voters[i].ParseVotesToString());
+		std::string voteSending = voters[i+1].Encrypt(voters[i].ParseVotesToString());
 		//cout << "voter "<< i << " send to voter "<< i + 1 << ": " << voteSending << endl;
 		voters[i].SendTo(voters[i+1], voteSending);
-		string voteString = voters[i+1].DecryptVote();
+		std::string voteString = voters[i+1].DecryptVote();
 		//cout << "voter " << i + 1 << " decrypt vote and get: " << voteString << endl;
 		voters[i+1].ParseStringToVotes(voteString);
 		for (int j = 0; j < voters[i+1].m_votes.size(); j++) {
