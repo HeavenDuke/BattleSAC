@@ -18,7 +18,7 @@ using CryptoPP::RSA;
 using CryptoPP::Integer;
 
 #define MAKE_VOTE(x,y) ((x<<8)|y)
-#define GET_VID(x) (x>>8)
+#define GET_VID(x) ((x>>8)&((1<<16)-1))
 #define GET_VOTE(x) (x&((1<<8)-1))
 
 class Voter {

@@ -31,10 +31,12 @@ void Voter::Initialize(RSA::PublicKey pubKey, RSA::PrivateKey privKey) {
 }
 
 void Voter::SetVote(int vid, int vote) {
-	if (vid >= (1 << 24) || vid < 0) {
+	if (vid >= (1 << 16) || vid < 0) {
 		throw std::runtime_error("Vid out of bound!");
 	}
 	this->m_unVote = MAKE_VOTE(vid, vote);
+	int checkbit = (vid * 100009 + vote) % 17;
+	this->m_unVote = checkbit << 24 | this->m_unVote;
 }
 
 Integer Voter::SendForSign(const Voter& signer,Integer nVote) {
