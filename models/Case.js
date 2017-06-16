@@ -6,7 +6,7 @@ var random = require('../libs').random;
 var supplement = require('../libs').supplement;
 
 var Case = function (player_count) {
-    this.initial_location = [random.rand_int(100, 500), random.rand_int(100, 500)];
+    this.initial_location = [random.rand_int(100, 3000), random.rand_int(100, 3000)];
     this.nOpen = Math.floor(player_count / 2) + 1;
     this.capacity = player_count;
     this.status = "close";
